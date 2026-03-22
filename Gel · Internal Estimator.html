@@ -1,0 +1,1687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gel · Internal Estimator</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Karla:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink:      #0f0e0d;
+  --ink2:     #1a1916;
+  --paper:    #ffffff;
+  --cream:    #f5f5f5;
+  --rule:     #e0e0e0;
+  --pink:     #ff3d9a;
+  --pink-d:   #cc2d7a;
+  --gold:     #c8902a;
+  --green:    #2d6b48;
+  --muted:    #888888;
+  --slate:    #333333;
+  --yellow:   #fffbf0;
+  --warn:     #fff5f5;
+}
+
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+html,body { height:100%; overflow:hidden; }
+body { font-family:'Karla',sans-serif; font-size:14px; background:var(--ink); color:var(--ink); display:flex; flex-direction:column; }
+.chrome { display:flex; flex-direction:column; height:100vh; }
+
+/* ── TOP BAR ── */
+.topbar {
+  background:var(--ink); height:56px; display:flex; align-items:center;
+  padding:0 20px; gap:12px; flex-shrink:0; border-bottom:1px solid #2a2824;
+  overflow:hidden;
+}
+.gel-logo {
+  display:flex; align-items:center; flex-shrink:0;
+  text-decoration:none;
+}
+.gel-logo img {
+  height:26px; width:auto; filter:brightness(0) invert(1);
+}
+.topbar-div { width:1px; height:22px; background:#2a2824; flex-shrink:0; }
+.topbar-label {
+  font-size:9px; letter-spacing:2px; text-transform:uppercase;
+  color:#555; white-space:nowrap; flex-shrink:0;
+}
+.topbar-badge {
+  background:var(--pink); color:white;
+  font-size:8px; letter-spacing:2px; text-transform:uppercase;
+  padding:2px 8px; font-weight:700; flex-shrink:0;
+}
+.topbar-project {
+  font-size:11px; color:#888; font-style:italic;
+  flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0;
+}
+.topbar-actions { display:flex; gap:5px; align-items:center; flex-shrink:0; }
+
+/* buttons */
+.tbtn {
+  font-family:'Karla',sans-serif; font-size:9px; letter-spacing:1px;
+  text-transform:uppercase; border:1px solid #333; background:transparent;
+  color:#888; padding:6px 11px; cursor:pointer; transition:all 0.15s; white-space:nowrap;
+}
+.tbtn:hover { background:var(--pink); border-color:var(--pink); color:white; }
+.tbtn.new-btn {
+  background:white; color:var(--ink); border-color:white; font-weight:700;
+}
+.tbtn.new-btn:hover { background:#f0f0f0; color:var(--ink); }
+.tbtn.save-btn {
+  background:#0d2b1a; border-color:var(--green); color:#5cba87; font-weight:600;
+}
+.tbtn.save-btn:hover { background:var(--green); color:white; border-color:var(--green); }
+.tbtn.copy-btn-top {
+  background:#1e1200; border-color:var(--gold); color:var(--gold); font-weight:600;
+}
+.tbtn.copy-btn-top:hover { background:var(--gold); color:white; }
+.tbtn.print-btn {
+  background:var(--pink); border-color:var(--pink); color:white; font-weight:600;
+}
+.tbtn.print-btn:hover { background:var(--pink-d); border-color:var(--pink-d); }
+.tbtn-sep { width:1px; height:20px; background:#2a2824; margin:0 2px; flex-shrink:0; }
+
+/* ── NAV TABS ── */
+.navtabs {
+  background:var(--ink2); display:flex; padding:0 28px;
+  flex-shrink:0; border-bottom:2px solid var(--pink);
+}
+.navtab {
+  font-family:'Karla',sans-serif; font-weight:600; font-size:11px;
+  letter-spacing:2px; text-transform:uppercase;
+  color:#555; padding:12px 20px 10px; cursor:pointer;
+  border-bottom:3px solid transparent; margin-bottom:-2px; transition:all 0.15s;
+}
+.navtab:hover { color:#aaa; }
+.navtab.active { color:white; border-bottom-color:var(--pink); }
+
+/* ── LAYOUT ── */
+.body { display:flex; flex:1; overflow:hidden; }
+.main { flex:1; overflow-y:auto; background:var(--paper); padding:28px 32px 60px; }
+.sidebar {
+  width:290px; flex-shrink:0; background:var(--ink);
+  overflow-y:auto; padding:22px 18px; border-left:1px solid #1e1c18;
+}
+.tab-content { display:none; height:100%; }
+.tab-content.active { display:flex; flex:1; overflow:hidden; }
+.tab-full { flex:1; overflow-y:auto; background:var(--paper); padding:28px 32px 60px; }
+
+/* ── BLOCKS ── */
+.block { margin-bottom:28px; }
+.block-head { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+.step-pip {
+  width:24px; height:24px; background:var(--pink); color:white;
+  font-weight:700; font-size:11px; display:flex; align-items:center;
+  justify-content:center; flex-shrink:0; letter-spacing:0;
+}
+.block-title {
+  font-family:'Bebas Neue',sans-serif; font-size:18px;
+  letter-spacing:1px; color:var(--slate);
+}
+.block-sub { font-size:10px; color:var(--muted); margin-left:auto; letter-spacing:0.5px; }
+
+.panel { background:var(--cream); border-left:3px solid var(--pink); padding:16px 18px; }
+.panel.gold-border { border-left-color:var(--gold); }
+
+/* fields */
+.field-label {
+  font-size:9px; letter-spacing:2px; text-transform:uppercase;
+  color:var(--muted); margin-bottom:4px; display:block;
+}
+.field-input {
+  width:100%; background:transparent; border:none;
+  border-bottom:1px solid var(--rule); padding:4px 0 5px;
+  font-family:'Karla',sans-serif; font-size:13px; color:var(--ink);
+  outline:none; transition:border-color 0.15s;
+}
+.field-input:focus { border-bottom-color:var(--pink); }
+.field-input::placeholder { color:#bbb; font-size:12px; }
+.grid4 { display:grid; grid-template-columns:1fr 1fr 1fr 140px; gap:12px 20px; }
+
+/* ── TABLE SHARED ── */
+.tbl-wrap { overflow-x:auto; }
+.tbl { width:100%; border-collapse:collapse; }
+.tbl th {
+  font-size:9px; letter-spacing:1.5px; text-transform:uppercase;
+  color:white; background:var(--ink); padding:9px 10px;
+  text-align:center; white-space:nowrap; border-bottom:2px solid var(--pink);
+}
+.tbl th:first-child { text-align:left; padding-left:12px; }
+.tbl td { padding:7px 8px; border-bottom:1px solid var(--rule); font-size:12px; vertical-align:middle; }
+.tbl tr:nth-child(even) td { background:#fafafa; }
+.tbl tr:nth-child(odd) td { background:white; }
+.tbl td input, .tbl td select {
+  width:100%; background:var(--yellow); border:1px solid #e8d89a;
+  padding:4px 7px; font-family:'Karla',sans-serif; font-size:12px;
+  color:var(--ink); outline:none; transition:border-color 0.15s;
+}
+.tbl td input:focus, .tbl td select:focus { border-color:var(--pink); background:white; }
+.tbl td input[type=number] { text-align:center; }
+.tbl td.computed { font-weight:600; color:var(--slate); text-align:center; }
+.tbl td.hours-val {
+  font-family:'Bebas Neue',sans-serif; font-size:20px;
+  color:var(--pink); text-align:center;
+}
+.tbl td.cost-val { font-weight:700; text-align:center; }
+.tbl tfoot tr td {
+  background:var(--ink)!important; color:white!important;
+  font-weight:700; font-size:12px; padding:10px 8px;
+}
+.row-del {
+  background:none; border:none; color:#bbb; cursor:pointer;
+  font-size:15px; padding:3px 5px; transition:color 0.15s;
+}
+.row-del:hover { color:var(--pink); }
+
+/* add buttons */
+.add-row { display:flex; gap:10px; margin-top:10px; }
+.add-btn {
+  font-family:'Karla',sans-serif; font-size:9px; letter-spacing:1.5px;
+  text-transform:uppercase; background:none; border:1px solid var(--rule);
+  color:var(--slate); padding:5px 12px; cursor:pointer; transition:all 0.15s;
+}
+.add-btn:hover { border-color:var(--pink); color:var(--pink); }
+.add-btn.gold { border-color:var(--gold); color:var(--gold); }
+.add-btn.gold:hover { background:var(--gold); color:white; }
+
+/* ── SPLIT ── */
+.split-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:14px; }
+.split-cell { text-align:center; }
+.split-lbl {
+  font-size:9px; letter-spacing:2px; text-transform:uppercase;
+  color:var(--muted); margin-bottom:8px;
+}
+.split-pct { display:flex; align-items:center; justify-content:center; gap:5px; margin-bottom:6px; }
+.split-pct input {
+  width:56px; background:var(--yellow); border:1px solid #e8d89a;
+  padding:4px 6px; font-family:'Bebas Neue',sans-serif; font-size:24px;
+  color:var(--ink); text-align:center; outline:none;
+}
+.split-pct input:focus { border-color:var(--pink); }
+.split-pct span { font-size:12px; color:var(--muted); }
+.split-amt { font-family:'Bebas Neue',sans-serif; font-size:30px; line-height:1; }
+.split-amt.profit { color:var(--green); }
+.split-amt.oh     { color:var(--gold); }
+.split-amt.labor  { color:var(--pink); }
+.split-note { font-size:10px; color:var(--muted); margin-top:4px; font-style:italic; }
+.split-warn { font-size:10px; color:#cc0000; text-align:center; min-height:16px; margin:6px 0; }
+
+.oh-pull {
+  display:flex; align-items:center; gap:12px;
+  padding:12px 0 0; border-top:1px solid var(--rule); flex-wrap:wrap;
+}
+.oh-pull label {
+  font-size:10px; letter-spacing:1px; text-transform:uppercase; color:var(--muted);
+}
+.oh-pull input {
+  width:100px; background:var(--yellow); border:1px solid #e8d89a;
+  padding:5px 8px; font-family:'Bebas Neue',sans-serif; font-size:18px;
+  color:var(--ink); text-align:center; outline:none;
+}
+.oh-pull input:focus { border-color:var(--gold); }
+.oh-result { font-size:11px; color:var(--gold); font-weight:600; }
+
+.eff-labor {
+  display:flex; justify-content:space-between; align-items:center;
+  background:var(--ink); padding:14px 18px; margin-top:14px;
+  border-left:4px solid var(--pink);
+}
+.eff-labor span { font-size:10px; letter-spacing:2px; text-transform:uppercase; color:#888; }
+.eff-labor strong { font-family:'Bebas Neue',sans-serif; font-size:28px; color:var(--pink); }
+
+/* bar */
+.bar-wrap { margin-top:12px; }
+.bar-meta { display:flex; justify-content:space-between; margin-bottom:4px; }
+.bar-meta span { font-size:9px; letter-spacing:1px; text-transform:uppercase; color:var(--muted); }
+.bar-track { height:4px; background:var(--rule); }
+.bar-fill { height:100%; transition:width 0.3s; max-width:100%; }
+.bar-fill.ok   { background:var(--green); }
+.bar-fill.over { background:#cc0000; }
+
+/* ── SIDEBAR ── */
+.s-sec { padding-bottom:18px; margin-bottom:18px; border-bottom:1px solid #222; }
+.s-sec:last-child { border-bottom:none; margin-bottom:0; padding-bottom:0; }
+.s-lbl {
+  font-size:9px; letter-spacing:2.5px; text-transform:uppercase;
+  color:#444; margin-bottom:10px;
+}
+.s-card { background:#111; padding:12px 14px; border-left:3px solid var(--pink); }
+.s-card-name {
+  font-family:'Bebas Neue',sans-serif; font-size:17px;
+  color:white; letter-spacing:0.5px; min-height:21px;
+}
+.s-card-sub { font-size:10px; color:#666; margin-top:2px; line-height:1.5; }
+.s-row { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px; }
+.s-row .lbl { font-size:11px; color:#888; }
+.s-row .val { font-size:12px; font-weight:700; color:white; }
+.s-row.big .val { font-family:'Bebas Neue',sans-serif; font-size:22px; color:var(--pink); }
+.s-row.g   .val { color:#5cba87; }
+.s-row.gld .val { color:var(--gold); }
+.s-div { border-top:1px solid #222; margin:9px 0; }
+.s-badge {
+  display:inline-block; font-size:8px; letter-spacing:1.5px;
+  text-transform:uppercase; padding:3px 9px; margin-bottom:10px;
+}
+.s-badge.ok   { background:#0d2b1a; color:#5cba87; }
+.s-badge.warn { background:#2b1e0a; color:#e0a030; }
+.s-badge.over { background:#2b0a0a; color:#ff6666; }
+.s-hours-item { display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; }
+.s-hours-item .n { font-size:11px; color:#888; max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.s-hours-item .d { flex:1; margin:0 6px; border-bottom:1px dotted #333; }
+.s-hours-item .h { font-size:12px; font-weight:700; color:white; }
+
+/* banzai */
+.banzai-box { background:#111; padding:12px; }
+.banzai-box strong { font-size:11px; color:white; display:block; margin-bottom:3px; }
+.banzai-box p { font-size:10px; color:#555; }
+.banzai-ta {
+  width:100%; background:#080808; border:1px solid #222; color:#ccc;
+  font-family:monospace; font-size:9px; padding:7px; margin-top:7px;
+  resize:none; outline:none; line-height:1.6; height:120px;
+}
+.copy-btn-side {
+  margin-top:5px; width:100%; background:none; border:1px solid #333;
+  color:#666; font-family:'Karla',sans-serif; font-size:9px;
+  letter-spacing:1.5px; text-transform:uppercase; padding:5px;
+  cursor:pointer; transition:all 0.15s;
+}
+.copy-btn-side:hover { border-color:white; color:white; }
+.save-btn-side {
+  margin-top:8px; width:100%; background:var(--pink); border:none;
+  color:white; font-family:'Karla',sans-serif; font-size:9px;
+  letter-spacing:1.5px; text-transform:uppercase; padding:8px;
+  cursor:pointer; transition:background 0.15s;
+}
+.save-btn-side:hover { background:var(--pink-d); }
+
+/* ── ROSTER ── */
+.roster-note {
+  background:#fff5f8; border-left:3px solid var(--pink);
+  padding:10px 14px; font-size:12px; color:#7a2040; margin-bottom:20px; line-height:1.6;
+}
+.type-badge {
+  font-size:8px; letter-spacing:1px; text-transform:uppercase;
+  padding:2px 8px; display:inline-block;
+}
+.type-badge.staff      { background:#e8f4ee; color:var(--green); }
+.type-badge.freelancer { background:#fff3e0; color:var(--gold); }
+.type-badge.overhead   { background:#fff5f8; color:var(--pink); }
+
+/* ── CLIENTS ── */
+.client-search-wrap { position:relative; margin-bottom:16px; }
+.client-search-input {
+  width:100%; background:white; border:1px solid var(--rule);
+  padding:9px 14px 9px 36px; font-family:'Karla',sans-serif;
+  font-size:13px; color:var(--ink); outline:none;
+  transition:border-color 0.15s;
+}
+.client-search-input:focus { border-color:var(--pink); }
+.client-search-icon {
+  position:absolute; left:12px; top:50%; transform:translateY(-50%);
+  color:var(--muted); font-size:14px; pointer-events:none;
+}
+.client-picker-wrap {
+  background:var(--cream); border-left:3px solid var(--pink);
+  padding:14px 16px; margin-bottom:14px;
+}
+.client-picker-row {
+  display:flex; align-items:center; gap:10px; margin-bottom:10px;
+}
+.client-picker-row label { font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); white-space:nowrap; }
+.client-picker-select {
+  flex:1; background:var(--yellow); border:1px solid #e8d89a;
+  padding:6px 10px; font-family:'Karla',sans-serif; font-size:13px;
+  color:var(--ink); outline:none; transition:border-color 0.15s;
+}
+.client-picker-select:focus { border-color:var(--pink); }
+.client-load-btn {
+  background:var(--pink); border:none; color:white;
+  font-family:'Karla',sans-serif; font-size:9px; letter-spacing:1.5px;
+  text-transform:uppercase; padding:7px 14px; cursor:pointer;
+  transition:background 0.15s; white-space:nowrap;
+}
+.client-load-btn:hover { background:var(--pink-d); }
+.client-add-link {
+  font-size:10px; color:var(--pink); cursor:pointer;
+  letter-spacing:0.5px; text-decoration:underline;
+  text-underline-offset:2px;
+}
+.client-add-link:hover { color:var(--pink-d); }
+
+/* clients tab */
+.clients-toolbar {
+  display:flex; align-items:center; gap:12px; margin-bottom:20px;
+}
+.clients-search {
+  flex:1; background:white; border:1px solid var(--rule);
+  padding:8px 14px; font-family:'Karla',sans-serif;
+  font-size:13px; color:var(--ink); outline:none;
+  transition:border-color 0.15s;
+}
+.clients-search:focus { border-color:var(--pink); }
+.client-tag {
+  font-size:8px; letter-spacing:1px; text-transform:uppercase;
+  padding:2px 8px; display:inline-block; margin-top:3px;
+}
+.client-tag.cpg      { background:#e8f4ee; color:var(--green); }
+.client-tag.beauty   { background:#fff0f8; color:var(--pink); }
+.client-tag.wellness { background:#fff3e0; color:var(--gold); }
+.client-tag.other    { background:#f0f0f0; color:var(--muted); }
+
+/* ── HISTORY ── */
+.hist-empty {
+  font-size:13px; color:var(--muted); font-style:italic;
+  padding:60px 0; text-align:center;
+}
+.hist-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:16px; }
+.hist-card {
+  background:white; border:1px solid var(--rule); border-top:3px solid var(--pink);
+  padding:18px; cursor:pointer; transition:all 0.15s; position:relative;
+}
+.hist-card:hover { box-shadow:0 4px 16px rgba(255,61,154,0.12); border-color:var(--pink); }
+.hist-card-co { font-family:'Bebas Neue',sans-serif; font-size:20px; color:var(--ink); letter-spacing:0.5px; margin-bottom:2px; }
+.hist-card-proj { font-size:12px; color:var(--muted); margin-bottom:12px; }
+.hist-card-total { font-family:'Bebas Neue',sans-serif; font-size:32px; color:var(--pink); line-height:1; }
+.hist-card-meta { font-size:10px; color:var(--muted); margin-top:4px; }
+.hist-card-del {
+  position:absolute; top:12px; right:12px; background:none;
+  border:none; color:#ccc; cursor:pointer; font-size:16px;
+  padding:4px; transition:color 0.15s;
+}
+.hist-card-del:hover { color:var(--pink); }
+
+/* ── MODAL ── */
+.modal-overlay {
+  display:none; position:fixed; inset:0;
+  background:rgba(10,10,10,0.9); z-index:200;
+  align-items:center; justify-content:center;
+}
+.modal-overlay.open { display:flex; }
+.modal {
+  background:white; border-top:4px solid var(--pink);
+  padding:30px; width:440px; max-width:94vw;
+  animation:mIn 0.18s ease;
+}
+@keyframes mIn { from{opacity:0;transform:translateY(-12px);}to{opacity:1;transform:translateY(0);} }
+.modal-title { font-family:'Bebas Neue',sans-serif; font-size:26px; margin-bottom:5px; }
+.modal-sub { font-size:12px; color:var(--muted); margin-bottom:16px; }
+.modal-warn {
+  background:#fff5f8; border-left:3px solid var(--pink);
+  padding:10px 14px; font-size:12px; color:#7a2040; margin-bottom:20px; line-height:1.5;
+}
+.modal-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:20px; }
+.mbtn {
+  font-family:'Karla',sans-serif; font-size:9px; letter-spacing:1.5px;
+  text-transform:uppercase; padding:8px 18px; cursor:pointer;
+  border:1px solid var(--rule); background:transparent;
+  color:var(--ink); transition:all 0.15s;
+}
+.mbtn:hover { background:var(--cream); }
+.mbtn.confirm { background:var(--pink); border-color:var(--pink); color:white; }
+.mbtn.confirm:hover { background:var(--pink-d); }
+
+/* ── CLIENT PICKER ── */
+.client-picker-wrap {
+  background:var(--cream); border-left:3px solid var(--pink);
+  padding:12px 16px; margin-bottom:14px;
+}
+.client-picker-row {
+  display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+}
+.client-picker-row label {
+  font-size:9px; letter-spacing:2px; text-transform:uppercase;
+  color:var(--muted); white-space:nowrap; flex-shrink:0;
+}
+.client-picker-select {
+  flex:1; min-width:200px; background:white; border:1px solid var(--rule);
+  padding:7px 10px; font-family:'Karla',sans-serif; font-size:13px;
+  color:var(--ink); outline:none; cursor:pointer;
+  transition:border-color 0.15s;
+}
+.client-picker-select:focus { border-color:var(--pink); }
+.client-add-link {
+  font-size:11px; color:var(--pink); cursor:pointer; white-space:nowrap;
+  text-decoration:underline; text-underline-offset:3px;
+}
+.client-add-link:hover { color:var(--pink-d); }
+
+/* grand total row */
+.grand-strip {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:12px 0 0; border-top:2px solid var(--ink); margin-top:6px;
+}
+.grand-strip span {
+  font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--muted);
+}
+.grand-strip strong {
+  font-family:'Bebas Neue',sans-serif; font-size:28px; color:var(--ink);
+}
+
+@media print {
+  .topbar .topbar-actions,.navtabs,.sidebar,.add-btn,.row-del,
+  .save-btn-side,.copy-btn-side,.banzai-box,.modal-overlay { display:none!important; }
+  .body { display:block; }
+  .tab-content { display:block!important; }
+  .main,.tab-full { padding:16px; }
+}
+</style>
+</head>
+<body>
+
+<!-- MODAL: New Project -->
+<div class="modal-overlay" id="modal-new">
+  <div class="modal">
+    <div class="modal-title">Start a New Estimate?</div>
+    <div class="modal-sub">This will clear the current worksheet.</div>
+    <div class="modal-warn">Save the current estimate first — unsaved work will be lost.</div>
+    <div class="modal-actions">
+      <button class="mbtn" onclick="closeModal('modal-new')">Cancel</button>
+      <button class="mbtn confirm" onclick="confirmNew()">Yes, Start Fresh</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Add / Edit Client -->
+<div class="modal-overlay" id="modal-add-client">
+  <div class="modal" style="width:520px;">
+    <div class="modal-title" id="client-modal-title">New Client</div>
+    <div class="modal-sub">Saved to the Client Directory and available in Step 1.</div>
+    <input type="hidden" id="client-edit-id" value="">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px 18px;margin-bottom:6px;">
+      <div>
+        <label class="field-label">Company Name *</label>
+        <input class="field-input" id="nc-co" type="text" placeholder="e.g. Good Grains Foods">
+      </div>
+      <div>
+        <label class="field-label">Contact Name</label>
+        <input class="field-input" id="nc-contact" type="text" placeholder="e.g. Cory Olson">
+      </div>
+      <div>
+        <label class="field-label">Email</label>
+        <input class="field-input" id="nc-email" type="email" placeholder="cory@goodgrains.com">
+      </div>
+      <div>
+        <label class="field-label">Phone</label>
+        <input class="field-input" id="nc-phone" type="tel" placeholder="(310) 000-0000">
+      </div>
+      <div>
+        <label class="field-label">Brand Category</label>
+        <select class="field-input" id="nc-cat" style="padding:4px 0 5px;">
+          <option value="">— select —</option>
+          <option>Food & Beverage</option>
+          <option>Beauty & Personal Care</option>
+          <option>Wellness & Supplements</option>
+          <option>Pharmaceuticals</option>
+          <option>Household & Cleaning</option>
+          <option>Pet</option>
+          <option>Other CPG</option>
+        </select>
+      </div>
+      <div>
+        <label class="field-label">Market</label>
+        <select class="field-input" id="nc-market" style="padding:4px 0 5px;">
+          <option value="">— select —</option>
+          <option>Domestic US</option>
+          <option>US Market Entry</option>
+          <option>Latin America → US</option>
+          <option>International</option>
+          <option>Amazon / DTC</option>
+        </select>
+      </div>
+      <div>
+        <label class="field-label">Status</label>
+        <select class="field-input" id="nc-status" style="padding:4px 0 5px;">
+          <option>Lead</option>
+          <option>Active Client</option>
+          <option>Past Client</option>
+          <option>On Hold</option>
+        </select>
+      </div>
+      <div>
+        <label class="field-label">Notes</label>
+        <input class="field-input" id="nc-notes" type="text" placeholder="Source, context…">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="mbtn" onclick="closeModal('modal-add-client')">Cancel</button>
+      <button class="mbtn confirm" onclick="saveClient()">Save Client</button>
+    </div>
+  </div>
+</div>
+
+<div class="chrome">
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <a class="gel-logo" href="https://gelcomm.com" target="_blank">
+      <img src="https://cdn.prod.website-files.com/63c85b8c5aa72610a5618a5e/658f4da3007bdd67e300aaff_gel-logo.svg" alt="Gel">
+    </a>
+    <div class="topbar-div"></div>
+    <div class="topbar-label">Project Estimator</div>
+    <div class="topbar-badge">Internal</div>
+    <div class="topbar-project" id="hdr-proj">New Estimate</div>
+    <div class="topbar-actions">
+      <button class="tbtn new-btn" onclick="openModal('modal-new')">+ New Project</button>
+      <div class="tbtn-sep"></div>
+      <button class="tbtn save-btn" onclick="saveEstimate()">↓ Save</button>
+      <button class="tbtn copy-btn-top" onclick="copyBanzai()">⎘ Copy Brief</button>
+      <button class="tbtn print-btn" onclick="window.print()">Print / PDF</button>
+    </div>
+  </div>
+
+  <!-- NAV TABS -->
+  <div class="navtabs">
+    <div class="navtab active" onclick="switchTab('estimator',this)">Estimator</div>
+    <div class="navtab" onclick="switchTab('clients',this)">Clients</div>
+    <div class="navtab" onclick="switchTab('roster',this)">Talent Roster</div>
+    <div class="navtab" onclick="switchTab('history',this)">Saved Estimates</div>
+  </div>
+
+  <div class="body">
+
+    <!-- ══ TAB: ESTIMATOR ══ -->
+    <div class="tab-content active" id="tab-estimator">
+      <div class="main">
+
+        <!-- STEP 1 -->
+        <div class="block">
+          <div class="block-head">
+            <div class="step-pip">1</div>
+            <div class="block-title">Client & Project</div>
+          </div>
+          <!-- Client picker -->
+          <div class="client-picker-wrap">
+            <div class="client-picker-row">
+              <label>Select Client</label>
+              <select class="client-picker-select" id="client-picker" onchange="loadClientIntoStep1(this.value)">
+                <option value="">— search or select a client —</option>
+              </select>
+              <span class="client-add-link" onclick="openModal('modal-add-client')">+ New Client</span>
+            </div>
+          </div>
+          <!-- Fields -->
+          <div class="panel">
+            <div class="grid4" style="margin-bottom:12px;">
+              <div><label class="field-label">Company</label><input class="field-input" id="c-co" type="text" placeholder="Client name" oninput="recalc()"></div>
+              <div><label class="field-label">Contact</label><input class="field-input" id="c-contact" type="text" placeholder="Name" oninput="recalc()"></div>
+              <div><label class="field-label">Email</label><input class="field-input" id="c-email" type="email" placeholder="email@client.com" oninput="recalc()"></div>
+              <div><label class="field-label">Phone</label><input class="field-input" id="c-phone" type="tel" placeholder="(310) 000-0000" oninput="recalc()"></div>
+            </div>
+            <div class="grid4">
+              <div><label class="field-label">Project Name</label><input class="field-input" id="c-proj" type="text" placeholder="Brief description" oninput="recalc()"></div>
+              <div>
+                <label class="field-label">Category</label>
+                <select class="field-input" id="c-cat" onchange="recalc()" style="padding:4px 0 5px;">
+                  <option value="">— select —</option>
+                  <option>Food & Beverage</option>
+                  <option>Beauty & Personal Care</option>
+                  <option>Wellness & Supplements</option>
+                  <option>Pharmaceuticals</option>
+                  <option>Household & Cleaning</option>
+                  <option>Pet</option>
+                  <option>Other CPG</option>
+                </select>
+              </div>
+              <div>
+                <label class="field-label">Market</label>
+                <select class="field-input" id="c-market" onchange="recalc()" style="padding:4px 0 5px;">
+                  <option value="">— select —</option>
+                  <option>Domestic US</option>
+                  <option>US Market Entry</option>
+                  <option>Latin America → US</option>
+                  <option>International</option>
+                  <option>Amazon / DTC</option>
+                </select>
+              </div>
+              <div><label class="field-label">Date</label><input class="field-input" id="c-date" type="date" oninput="recalc()"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 2 -->
+        <div class="block">
+          <div class="block-head">
+            <div class="step-pip">2</div>
+            <div class="block-title">Services & Market Rate</div>
+            <div class="block-sub">Price from what the market will bear</div>
+          </div>
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <thead><tr>
+                <th style="width:28%">Service</th>
+                <th>Market Range</th>
+                <th>Your Price ($)</th>
+                <th>Qty</th>
+                <th>Line Total</th>
+                <th>Notes</th>
+                <th></th>
+              </tr></thead>
+              <tbody id="svc-body"></tbody>
+              <tfoot><tr>
+                <td colspan="4" style="text-align:left;padding-left:12px;font-size:9px;letter-spacing:2px;text-transform:uppercase;">Project Total</td>
+                <td style="text-align:center;font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--pink);" id="svc-grand">$0</td>
+                <td colspan="2"></td>
+              </tr></tfoot>
+            </table>
+          </div>
+          <div class="add-row">
+            <button class="add-btn" onclick="addSvcRow()">+ Add Service</button>
+            <button class="add-btn gold" onclick="addSvcRow(true)">+ Custom Service</button>
+          </div>
+        </div>
+
+        <!-- STEP 3 -->
+        <div class="block">
+          <div class="block-head">
+            <div class="step-pip">3</div>
+            <div class="block-title">Profit / Overhead / Labor Split</div>
+            <div class="block-sub">Must total 100%</div>
+          </div>
+          <div class="panel gold-border">
+            <div class="split-grid">
+              <div class="split-cell">
+                <div class="split-lbl">Profit</div>
+                <div class="split-pct"><input id="pct-p" type="number" min="0" max="100" value="45" oninput="recalc()"><span>%</span></div>
+                <div class="split-amt profit" id="amt-p">$0</div>
+                <div class="split-note">Protect this first</div>
+              </div>
+              <div class="split-cell">
+                <div class="split-lbl">Overhead</div>
+                <div class="split-pct"><input id="pct-oh" type="number" min="0" max="100" value="35" oninput="recalc()"><span>%</span></div>
+                <div class="split-amt oh" id="amt-oh">$0</div>
+                <div class="split-note">Includes Pato's draw</div>
+              </div>
+              <div class="split-cell">
+                <div class="split-lbl">Labor</div>
+                <div class="split-pct"><input id="pct-l" type="number" min="0" max="100" value="20" oninput="recalc()"><span>%</span></div>
+                <div class="split-amt labor" id="amt-l">$0</div>
+                <div class="split-note">Start low</div>
+              </div>
+            </div>
+            <div class="split-warn" id="split-warn"></div>
+            <div class="oh-pull">
+              <label>Pull from Overhead → Labor ($)</label>
+              <input id="oh-pull" type="number" min="0" step="500" value="0" oninput="recalc()">
+              <div class="oh-result" id="oh-result"></div>
+            </div>
+            <div class="eff-labor">
+              <span>Effective Labor Budget</span>
+              <strong id="eff-labor">$0</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 4 -->
+        <div class="block">
+          <div class="block-head">
+            <div class="step-pip">4</div>
+            <div class="block-title">Labor Allocation</div>
+            <div class="block-sub">Keep alloc % lean — pull from OH if needed</div>
+          </div>
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <thead><tr>
+                <th style="width:18%">Phase / Service</th>
+                <th style="width:16%">Talent</th>
+                <th style="width:16%">Role</th>
+                <th>Rate ($/hr)</th>
+                <th>Alloc %</th>
+                <th>Hours</th>
+                <th>Cost ($)</th>
+                <th></th>
+              </tr></thead>
+              <tbody id="lab-body"></tbody>
+              <tfoot><tr>
+                <td colspan="4" style="text-align:left;padding-left:12px;font-size:9px;letter-spacing:2px;text-transform:uppercase;">Totals</td>
+                <td style="text-align:center;" id="lab-tot-alloc">0%</td>
+                <td style="text-align:center;" id="lab-tot-hrs">—</td>
+                <td style="text-align:center;" id="lab-tot-cost">$0</td>
+                <td></td>
+              </tr></tfoot>
+            </table>
+          </div>
+          <div class="add-row"><button class="add-btn" onclick="addLaborRow()">+ Add Role</button></div>
+          <div class="bar-wrap">
+            <div class="bar-meta"><span>Labor Budget Used</span><span id="bar-pct">0%</span></div>
+            <div class="bar-track"><div class="bar-fill ok" id="bar-fill" style="width:0%"></div></div>
+          </div>
+        </div>
+
+      </div><!-- /main -->
+
+      <!-- SIDEBAR -->
+      <div class="sidebar">
+        <div class="s-sec">
+          <div class="s-lbl">Client</div>
+          <div class="s-card">
+            <div class="s-card-name" id="s-co">—</div>
+            <div class="s-card-sub" id="s-contact"></div>
+          </div>
+        </div>
+        <div class="s-sec">
+          <div class="s-lbl">Summary</div>
+          <div class="s-badge warn" id="s-badge">○ Under-allocated</div>
+          <div class="s-row big"><span class="lbl">Project Total</span><span class="val" id="s-total">$0</span></div>
+          <div class="s-div"></div>
+          <div class="s-row g">  <span class="lbl">Profit</span>        <span class="val" id="s-profit">$0</span></div>
+          <div class="s-row gld"><span class="lbl">Overhead</span>       <span class="val" id="s-oh">$0</span></div>
+          <div class="s-row">   <span class="lbl" style="color:var(--pink)">Labor Budget</span><span class="val" id="s-lab-bud" style="color:var(--pink)">$0</span></div>
+          <div class="s-div"></div>
+          <div class="s-row"><span class="lbl">Labor Used</span>      <span class="val" id="s-lab-used">$0</span></div>
+          <div class="s-row"><span class="lbl">Labor Remaining</span> <span class="val" id="s-lab-rem">$0</span></div>
+        </div>
+        <div class="s-sec">
+          <div class="s-lbl">Hours by Role</div>
+          <div id="s-hrs-list"><div style="color:#333;font-size:11px;font-style:italic;">Add roles to see breakdown</div></div>
+        </div>
+        <div class="s-sec">
+          <div class="s-lbl">Banzai Brief</div>
+          <div class="banzai-box">
+            <strong>Internal → Banzai Handoff</strong>
+            <p>Copy into Banzai. Do not share with client.</p>
+            <textarea class="banzai-ta" id="banzai-out" readonly></textarea>
+            <button class="copy-btn-side" onclick="copyBanzai()">⎘ Copy to Clipboard</button>
+          </div>
+          <button class="save-btn-side" onclick="saveEstimate()">↓ Save to History</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ TAB: CLIENTS ══ -->
+    <div class="tab-content" id="tab-clients">
+      <div class="tab-full">
+        <div class="block">
+          <div class="block-head">
+            <div class="step-pip" style="background:var(--pink);">✦</div>
+            <div class="block-title">Client Directory</div>
+            <div class="block-sub">All contacts including leads</div>
+          </div>
+          <div class="clients-toolbar">
+            <input class="clients-search" id="clients-search" type="text"
+              placeholder="Search by company, contact, or category…"
+              oninput="renderClients()">
+            <button class="add-btn" style="border-color:var(--pink);color:var(--pink);padding:8px 16px;"
+              onclick="openModal('modal-add-client')">+ Add Client</button>
+          </div>
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <thead><tr>
+                <th style="width:20%">Company</th>
+                <th style="width:18%">Contact</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Category</th>
+                <th>Market</th>
+                <th>Status</th>
+                <th></th>
+              </tr></thead>
+              <tbody id="clients-body"></tbody>
+            </table>
+          </div>
+          <div id="clients-empty" style="display:none;padding:40px 0;text-align:center;color:var(--muted);font-style:italic;font-size:13px;">
+            No clients yet. Add your first one above.
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="tab-content" id="tab-roster">
+      <div class="tab-full">
+        <div class="block">
+          <div class="block-head">
+            <div class="step-pip" style="background:var(--green);">★</div>
+            <div class="block-title">Talent Roster</div>
+            <div class="block-sub">Add a row here → appears instantly in Step 4</div>
+          </div>
+          <div class="roster-note">
+            One row per role per person. Tyron and others with multiple capacities each get their own row. <strong>Pato bills to Overhead — add to a project estimate only with his confirmation.</strong>
+          </div>
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <thead><tr>
+                <th style="width:20%">Name</th>
+                <th style="width:22%">Role / Capacity</th>
+                <th>Rate ($/hr)</th>
+                <th>Type</th>
+                <th>Notes</th>
+                <th></th>
+              </tr></thead>
+              <tbody id="roster-body"></tbody>
+            </table>
+          </div>
+          <div class="add-row"><button class="add-btn" onclick="addRosterRow()">+ Add Talent</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ TAB: CLIENTS ══ -->
+    <div class="tab-content" id="tab-clients">
+      <div class="tab-full">
+        <div class="block">
+          <div class="block-head">
+            <div class="step-pip" style="background:var(--pink);">✦</div>
+            <div class="block-title">Client Directory</div>
+            <div class="block-sub">Click → Use to load a client into the Estimator</div>
+          </div>
+
+          <!-- Import + actions bar -->
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;">
+            <button class="add-btn" style="border-color:var(--pink);color:var(--pink);" onclick="openModal('modal-add-client')">+ New Client</button>
+            <label class="add-btn gold" style="cursor:pointer;margin:0;">
+              ↑ Import Bonsai CSV
+              <input type="file" accept=".csv" style="display:none;" onchange="importBonsaiCSV(this)">
+            </label>
+            <button class="add-btn" onclick="resetToSeedClients()" style="border-color:#ccc;color:#aaa;">↺ Reset to Bonsai data</button>
+            <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+              <input id="clients-search" type="text" placeholder="Search clients…"
+                style="background:var(--cream);border:1px solid var(--rule);padding:6px 12px;font-family:'Karla',sans-serif;font-size:12px;color:var(--ink);outline:none;width:220px;"
+                oninput="renderClients()">
+            </div>
+          </div>
+
+          <!-- Import note -->
+          <div id="import-note" style="display:none;background:#f0fff4;border-left:3px solid var(--green);padding:9px 14px;font-size:12px;color:#1a4d2e;margin-bottom:14px;"></div>
+
+          <!-- Table -->
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <thead><tr>
+                <th style="width:18%">Company</th>
+                <th style="width:16%">Contact</th>
+                <th style="width:18%">Email</th>
+                <th>Phone</th>
+                <th>Category</th>
+                <th>Market</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr></thead>
+              <tbody id="clients-body"></tbody>
+            </table>
+          </div>
+          <div id="clients-empty" style="display:none;padding:40px 0;text-align:center;font-size:13px;color:var(--muted);font-style:italic;">
+            No clients yet. Import from Bonsai or add one manually.
+          </div>
+          <div style="margin-top:10px;font-size:10px;color:var(--muted);font-style:italic;">
+            To update from Bonsai: Clients → Export → upload CSV above. New imports merge without duplicating existing records.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ TAB: HISTORY ══ -->
+    <div class="tab-content" id="tab-history">
+      <div class="tab-full">
+        <div class="block">
+          <div class="block-head">
+            <div class="step-pip" style="background:var(--muted);">↺</div>
+            <div class="block-title">Saved Estimates</div>
+            <div class="block-sub">Click any card to reload into Estimator</div>
+          </div>
+          <div id="hist-container"><div class="hist-empty">No saved estimates yet.</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+//  CLIENT DATABASE
+// ═══════════════════════════════════════
+let clients = [], clientNext = 1;
+
+const SEED_CLIENTS = [
+  {co:"Bulls i Toy LLC",                                    contact:"Mark Den Adel",    email:"madenadel@excellmktg.com",       phone:"", cat:"", market:"", status:"Client", notes:""},
+  {co:"Kowa Health Care US",                                contact:"Katherine Salazar",email:"ksalazar@kowahealthcareus.com",  phone:"", cat:"Pharmaceuticals", market:"Domestic US", status:"Active Client", notes:"Vantelin brand"},
+  {co:"Zuru",                                               contact:"Eric Olavson",     email:"eric.olavson@zuru.com",          phone:"", cat:"", market:"", status:"Lead", notes:""},
+  {co:"Samba",                                              contact:"Christine Moll",   email:"christinemoll@gmail.com",        phone:"", cat:"", market:"", status:"Lead", notes:""},
+  {co:"Munch Fit",                                          contact:"Omashka Khan",     email:"omashkak@gmail.com",             phone:"", cat:"Food & Beverage", market:"Domestic US", status:"Past Client", notes:"Everdrate project"},
+  {co:"International Watersport Products",                  contact:"Sander Schmidt",   email:"sander@livmex.nl",               phone:"", cat:"", market:"International", status:"Active Client", notes:""},
+  {co:"Azurity Pharmaceuticals, Inc.",                      contact:"Perry Venugopal",  email:"terri@gelcomm.com",              phone:"", cat:"Pharmaceuticals", market:"Domestic US", status:"Active Client", notes:""},
+  {co:"Tombot, Inc.",                                       contact:"Thomas E. Stevens",email:"tom.stevens@tombot.com",         phone:"", cat:"", market:"Domestic US", status:"Active Client", notes:""},
+  {co:"The Red Tree",                                       contact:"Zoe Offen",        email:"zoffen@theredtree.co.uk",        phone:"", cat:"", market:"International", status:"Active Client", notes:""},
+  {co:"RDM Industries Inc.",                                contact:"Leonard Parker",   email:"leonardp@rdmindustriesinc.com",  phone:"", cat:"", market:"Domestic US", status:"Lead", notes:""},
+  {co:"SEASTAR Corporation",                                contact:"Kaz Yamafuji",     email:"kaz.y@babyhealthcare.us",        phone:"", cat:"", market:"Domestic US", status:"Lead", notes:""},
+  {co:"Good Grains",                                        contact:"Cory Olson",       email:"accounting@goodgrains.com",      phone:"", cat:"Food & Beverage", market:"Domestic US", status:"Active Client", notes:"KeHE Golden Ticket — ExpoWest"},
+  {co:"Cinetic Media",                                      contact:"Kelly McKeone",    email:"kelly@cineticmedia.com",         phone:"", cat:"", market:"Domestic US", status:"Lead", notes:""},
+  {co:"Cloudgoose Biology Science & Technology Co., Ltd.",  contact:"Sarah Remy",       email:"sarahremyllc@gmail.com",         phone:"", cat:"", market:"International", status:"Lead", notes:""},
+  {co:"Provisor Marketing",                                 contact:"Julie McPeek",     email:"jmpeek@provisormarketing.com",   phone:"", cat:"", market:"Domestic US", status:"Lead", notes:""},
+  {co:"Manish Amin",                                        contact:"Manish Amin",      email:"mamin@solely.com",               phone:"", cat:"", market:"Domestic US", status:"Lead", notes:""},
+  {co:"Sultan Furnishing",                                  contact:"Bader Sultan",     email:"bsultan@sultanfurnishing.com",   phone:"", cat:"", market:"Domestic US", status:"Lead", notes:""},
+  {co:"Blake Winemiller",                                   contact:"Blake Winemiller", email:"bwinemiller@derickdermatology.com",phone:"",cat:"Pharmaceuticals", market:"Domestic US", status:"Active Client", notes:""},
+  {co:"Juliana Hostetter",                                  contact:"Juliana Hostetter",email:"ap@relatable.com",               phone:"", cat:"", market:"Domestic US", status:"Active Client", notes:""},
+  {co:"Biocodex Florastor",                                 contact:"Accounts Payable", email:"accountspayablena@biocodex.com", phone:"", cat:"Wellness & Supplements", market:"Domestic US", status:"Active Client", notes:""},
+  {co:"Alamance Foods",                                     contact:"Nick Patrick",     email:"nick.patrick@alamancefoods.com", phone:"", cat:"Food & Beverage", market:"Domestic US", status:"Active Client", notes:""},
+  {co:"SNL Creative",                                       contact:"Shawn Zindroski",  email:"shawn@snlcreative.com",          phone:"", cat:"", market:"Domestic US", status:"Active Client", notes:""},
+];
+
+const CLIENT_VERSION = 'v3'; // bump this to force-reload seed data
+
+function loadClients() {
+  try {
+    const ver = localStorage.getItem('gel_clients_ver');
+    const s   = JSON.parse(localStorage.getItem('gel_clients'));
+    if(ver === CLIENT_VERSION && s && s.length) {
+      clients = s;
+      clientNext = s.reduce((m,c) => Math.max(m, c.id||0), 0) + 1;
+      return;
+    }
+  } catch(e) {}
+  // Fresh load from seed
+  clients = SEED_CLIENTS.map((c,i) => ({id:i+1,...c}));
+  clientNext = clients.length + 1;
+  saveClients();
+}
+
+function saveClients() {
+  localStorage.setItem('gel_clients', JSON.stringify(clients));
+  localStorage.setItem('gel_clients_ver', CLIENT_VERSION);
+  populateClientPicker();
+}
+
+function saveClients() {
+  localStorage.setItem('gel_clients', JSON.stringify(clients));
+  populateClientPicker();
+}
+
+function populateClientPicker() {
+  const sel = document.getElementById('client-picker');
+  if(!sel) return;
+  const current = sel.value;
+  sel.innerHTML = '<option value="">— search or select a client —</option>';
+  [...clients]
+    .sort((a,b) => (a.co||'').localeCompare(b.co||''))
+    .forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = c.co + (c.contact ? ` — ${c.contact}` : '');
+      sel.appendChild(opt);
+    });
+  if(current) sel.value = current;
+}
+
+function loadClientIntoStep1(id) {
+  if(!id) return;
+  const c = clients.find(c => c.id == id);
+  if(!c) return;
+  document.getElementById('c-co').value      = c.co      || '';
+  document.getElementById('c-contact').value = c.contact || '';
+  document.getElementById('c-email').value   = c.email   || '';
+  document.getElementById('c-phone').value   = c.phone   || '';
+  const catEl = document.getElementById('c-cat');
+  if(catEl) catEl.value = c.cat || '';
+  const mktEl = document.getElementById('c-market');
+  if(mktEl) mktEl.value = c.market || '';
+  recalc();
+}
+
+function renderClients() {
+  const query = (document.getElementById('clients-search')||{}).value?.toLowerCase() || '';
+  const tbody = document.getElementById('clients-body');
+  const empty = document.getElementById('clients-empty');
+  if(!tbody) return;
+
+  const filtered = clients.filter(c =>
+    !query ||
+    (c.co||'').toLowerCase().includes(query) ||
+    (c.contact||'').toLowerCase().includes(query) ||
+    (c.cat||'').toLowerCase().includes(query) ||
+    (c.status||'').toLowerCase().includes(query)
+  );
+
+  if(!filtered.length) {
+    tbody.innerHTML = '';
+    if(empty) empty.style.display = 'block';
+    return;
+  }
+  if(empty) empty.style.display = 'none';
+
+  tbody.innerHTML = filtered
+    .sort((a,b) => (a.co||'').localeCompare(b.co||''))
+    .map(c => {
+      const statusColor = {
+        'Active Client':'color:var(--green);background:#e8f4ee;',
+        'Lead':         'color:var(--pink);background:#fff0f8;',
+        'Past Client':  'color:var(--muted);background:#f0f0f0;',
+        'On Hold':      'color:var(--gold);background:#fff3e0;',
+      }[c.status] || '';
+      return `<tr>
+        <td style="font-weight:600;">${c.co||''}</td>
+        <td>${c.contact||'—'}</td>
+        <td style="font-size:11px;">${c.email||'—'}</td>
+        <td style="font-size:11px;">${c.phone||'—'}</td>
+        <td style="font-size:11px;">${c.cat||'—'}</td>
+        <td style="font-size:11px;">${c.market||'—'}</td>
+        <td><span style="font-size:8px;letter-spacing:1px;text-transform:uppercase;padding:2px 8px;${statusColor}">${c.status||''}</span></td>
+        <td style="white-space:nowrap;">
+          <button class="row-del" style="color:var(--pink);font-size:11px;letter-spacing:1px;" onclick="useClientForEstimate(${c.id})">→ Use</button>
+          <button class="row-del" onclick="editClient(${c.id})">✎</button>
+          <button class="row-del" onclick="deleteClient(${c.id})">×</button>
+        </td>
+      </tr>`;
+    }).join('');
+}
+
+function useClientForEstimate(id) {
+  loadClientIntoStep1(id);
+  document.getElementById('client-picker').value = id;
+  switchTab('estimator', document.querySelector('.navtab'));
+}
+
+function saveClient() {
+  const id = document.getElementById('client-edit-id').value;
+  const data = {
+    co:      document.getElementById('nc-co').value.trim(),
+    contact: document.getElementById('nc-contact').value.trim(),
+    email:   document.getElementById('nc-email').value.trim(),
+    phone:   document.getElementById('nc-phone').value.trim(),
+    cat:     document.getElementById('nc-cat').value,
+    market:  document.getElementById('nc-market').value,
+    status:  document.getElementById('nc-status').value,
+    notes:   document.getElementById('nc-notes').value.trim(),
+  };
+  if(!data.co) { alert('Company name is required.'); return; }
+
+  if(id) {
+    const idx = clients.findIndex(c => c.id == id);
+    if(idx >= 0) clients[idx] = {...clients[idx], ...data};
+  } else {
+    clients.push({id: clientNext++, ...data});
+  }
+  saveClients();
+  renderClients();
+  closeModal('modal-add-client');
+  clearClientModal();
+}
+
+function editClient(id) {
+  const c = clients.find(c => c.id === id); if(!c) return;
+  document.getElementById('client-modal-title').textContent = 'Edit Client';
+  document.getElementById('client-edit-id').value  = id;
+  document.getElementById('nc-co').value      = c.co      || '';
+  document.getElementById('nc-contact').value = c.contact || '';
+  document.getElementById('nc-email').value   = c.email   || '';
+  document.getElementById('nc-phone').value   = c.phone   || '';
+  document.getElementById('nc-cat').value     = c.cat     || '';
+  document.getElementById('nc-market').value  = c.market  || '';
+  document.getElementById('nc-status').value  = c.status  || 'Lead';
+  document.getElementById('nc-notes').value   = c.notes   || '';
+  openModal('modal-add-client');
+}
+
+function deleteClient(id) {
+  if(!confirm('Remove this client from the directory?')) return;
+  clients = clients.filter(c => c.id !== id);
+  saveClients(); renderClients();
+}
+
+function clearClientModal() {
+  document.getElementById('client-modal-title').textContent = 'New Client';
+  document.getElementById('client-edit-id').value = '';
+  ['nc-co','nc-contact','nc-email','nc-phone','nc-notes'].forEach(id =>
+    document.getElementById(id).value = '');
+  ['nc-cat','nc-market'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('nc-status').value = 'Lead';
+}
+
+function resetToSeedClients() {
+  if(!confirm('Reset to the latest Bonsai export? Any manually added clients will be lost.')) return;
+  localStorage.removeItem('gel_clients');
+  localStorage.removeItem('gel_clients_ver');
+  loadClients();
+  renderClients();
+}
+
+function importBonsaiCSV(input) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const lines = e.target.result.split('\n').filter(l => l.trim());
+    if(!lines.length) return;
+    // Skip header row
+    const rows = lines.slice(1);
+    let added=0, skipped=0;
+    rows.forEach(line => {
+      // Parse CSV respecting quoted fields
+      const cols = parseCSVLine(line);
+      if(!cols || !cols[0]) return;
+      const co = cols[0].trim().replace(/^"|"$/g,'');
+      if(!co || co === 'Sample Client') return;
+      // Check for duplicate by company name
+      const exists = clients.find(c => c.co.toLowerCase() === co.toLowerCase());
+      if(exists) { skipped++; return; }
+      clients.push({
+        id: clientNext++,
+        co,
+        contact: (cols[1]||'').trim().replace(/^"|"$/g,''),
+        email:   (cols[2]||'').trim().replace(/^"|"$/g,''),
+        phone:   '',
+        cat:     '',
+        market:  '',
+        status:  (cols[3]||'').trim().replace(/^"|"$/g,'') === 'Client' ? 'Active Client' : 'Lead',
+        notes:   '',
+        website: (cols[4]||'').trim().replace(/^"|"$/g,''),
+      });
+      added++;
+    });
+    saveClients();
+    renderClients();
+    const note = document.getElementById('import-note');
+    note.style.display = 'block';
+    note.textContent = `✓ Import complete — ${added} clients added, ${skipped} already existed.`;
+    setTimeout(() => note.style.display='none', 5000);
+    input.value = '';
+  };
+  reader.readAsText(file);
+}
+
+function parseCSVLine(line) {
+  const result = []; let cur = ''; let inQ = false;
+  for(let i=0; i<line.length; i++) {
+    const ch = line[i];
+    if(ch==='"') { inQ=!inQ; }
+    else if(ch===',' && !inQ) { result.push(cur); cur=''; }
+    else { cur+=ch; }
+  }
+  result.push(cur);
+  return result;
+}
+// ═══════════════════════════════════════
+//  SERVICES & ROSTER
+// ═══════════════════════════════════════
+const SERVICES = [
+  {name:"Brand Strategy",                                      range:"$15,000 – $25,000"},
+  {name:"Packaging Design — Lead SKU (R1 incl. 2 flavors)",   range:"$8,000 – $15,000"},
+  {name:"Additional SKU — Flavor Extension",                   range:"$2,500 – $4,500"},
+  {name:"Copy / Mechanical Updates — per SKU",                 range:"$500 – $800"},
+  {name:"Illustration Development",                            range:"$8,000 – $15,000"},
+  {name:"Brand Mark Development",                              range:"$5,000 – $12,000"},
+  {name:"Copywriting",                                         range:"TBD per project"},
+  {name:"Full Brand Launch (strategy+identity+pkg+guidelines)",range:"$35,000 – $75,000"},
+  {name:"Brand Identity + Guidelines",                         range:"$12,000 – $20,000"},
+  {name:"Naming",                                              range:"$8,000 – $15,000"},
+];
+
+const DEFAULT_ROSTER = [
+  {name:"Pato",              role:"Principal / Creative Director", rate:200, type:"Overhead",   note:"Compensated via OH — bill selectively, confirm with Pato"},
+  {name:"Tathy Otero",       role:"Senior Designer",               rate:100, type:"Staff",      note:""},
+  {name:"Tyron Akal",        role:"Brand Strategist",              rate:120, type:"Staff",      note:""},
+  {name:"Tyron Akal",        role:"Copywriter",                     rate:95, type:"Staff",      note:""},
+  {name:"Tyron Akal",        role:"Account Executive",              rate:95, type:"Staff",      note:""},
+  {name:"Pauline Bojorquez", role:"Account Executive",              rate:90, type:"Staff",      note:""},
+  {name:"Darcy Naugle",      role:"Senior Designer",               rate:100, type:"Staff",      note:""},
+  {name:"Sophie Curalli",    role:"Designer",                       rate:75, type:"Staff",      note:""},
+  {name:"Julie McPeek",      role:"Strategist",                    rate:110, type:"Staff",      note:""},
+  {name:"Brenna McPeek",     role:"Strategist",                    rate:100, type:"Staff",      note:""},
+  {name:"Brenna McPeek",     role:"Copywriter",                     rate:85, type:"Staff",      note:""},
+  {name:"Terri Goldstein",   role:"Senior Strategist",             rate:130, type:"Staff",      note:""},
+  {name:"Cynthia Weinman",   role:"Research Director",             rate:125, type:"Staff",      note:""},
+  {name:"Freelancer",        role:"Designer",                       rate:75, type:"Freelancer", note:""},
+  {name:"Freelancer",        role:"Illustrator",                    rate:90, type:"Freelancer", note:""},
+  {name:"Freelancer",        role:"Copywriter",                     rate:85, type:"Freelancer", note:""},
+  {name:"Freelancer",        role:"Photographer",                  rate:110, type:"Freelancer", note:""},
+];
+
+let svcRows=[], svcNext=1;
+let labRows=[], labNext=1;
+let rosterRows=[], rosterNext=1;
+
+// ── INIT ──
+window.addEventListener('load', () => {
+  document.getElementById('c-date').value = new Date().toISOString().split('T')[0];
+  loadClients();
+  loadRoster();
+  renderRoster();
+  addSvcRow(); addSvcRow();
+  addLaborRow({phase:"Brand Strategy",   name:"Tyron Akal",        role:"Brand Strategist"});
+  addLaborRow({phase:"Packaging Design", name:"Tathy Otero",       role:"Senior Designer"});
+  addLaborRow({phase:"Project Mgmt",     name:"Pauline Bojorquez", role:"Account Executive"});
+  loadHistory();
+  recalc();
+});
+
+// ── TABS ──
+function switchTab(id, el) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.navtab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  el.classList.add('active');
+  if(id === 'history') renderHistory();
+  if(id === 'clients') renderClients();
+}
+
+// ── MODALS ──
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); if(id==='modal-add-client') clearClientModal(); }
+function confirmNew()   { closeModal('modal-new'); clearAll(); }
+document.querySelectorAll('.modal-overlay').forEach(el =>
+  el.addEventListener('click', e => { if(e.target===el) el.classList.remove('open'); }));
+
+// ── ROSTER ──
+function loadRoster() {
+  try {
+    const s = JSON.parse(localStorage.getItem('gel_roster2'));
+    if(s && s.length) { rosterRows=s; rosterNext=s.reduce((m,r)=>Math.max(m,r.id),0)+1; return; }
+  } catch(e) {}
+  rosterRows = DEFAULT_ROSTER.map((r,i) => ({id:i+1,...r}));
+  rosterNext = rosterRows.length + 1;
+}
+function saveRoster() { localStorage.setItem('gel_roster2', JSON.stringify(rosterRows)); }
+function renderRoster() {
+  const tbody = document.getElementById('roster-body');
+  tbody.innerHTML = '';
+  rosterRows.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.id = `rr-${r.id}`;
+    tr.innerHTML = `
+      <td><input type="text" value="${r.name}" oninput="updateRoster(${r.id},'name',this.value)"></td>
+      <td><input type="text" value="${r.role}" oninput="updateRoster(${r.id},'role',this.value)"></td>
+      <td><input type="number" value="${r.rate}" min="0" step="5" style="width:80px;" oninput="updateRoster(${r.id},'rate',parseFloat(this.value)||0)"></td>
+      <td style="text-align:center;">
+        <select onchange="updateRoster(${r.id},'type',this.value)" style="width:110px;">
+          <option ${r.type==='Staff'?'selected':''}>Staff</option>
+          <option ${r.type==='Freelancer'?'selected':''}>Freelancer</option>
+          <option ${r.type==='Overhead'?'selected':''}>Overhead</option>
+        </select>
+      </td>
+      <td><input type="text" value="${r.note||''}" oninput="updateRoster(${r.id},'note',this.value)"></td>
+      <td><button class="row-del" onclick="delRosterRow(${r.id})">×</button></td>`;
+    tbody.appendChild(tr);
+  });
+}
+function addRosterRow() {
+  const id = rosterNext++;
+  rosterRows.push({id, name:'', role:'', rate:0, type:'Freelancer', note:''});
+  renderRoster(); saveRoster();
+}
+function updateRoster(id, key, val) {
+  const r = rosterRows.find(r => r.id===id);
+  if(r) { r[key]=val; saveRoster(); }
+}
+function delRosterRow(id) {
+  rosterRows = rosterRows.filter(r => r.id!==id);
+  renderRoster(); saveRoster();
+}
+function getRosterRate(name, role) {
+  const m = rosterRows.find(r =>
+    r.name.toLowerCase()===name.toLowerCase() &&
+    r.role.toLowerCase()===role.toLowerCase());
+  return m ? m.rate : null;
+}
+function getRosterNames() { return [...new Set(rosterRows.map(r => r.name))]; }
+function getRolesForName(name) {
+  return rosterRows.filter(r => r.name.toLowerCase()===name.toLowerCase()).map(r => r.role);
+}
+
+// ── SERVICE ROWS ──
+function addSvcRow(custom=false) {
+  const id = svcNext++;
+  svcRows.push(id);
+  const tr = document.createElement('tr');
+  tr.id = `sr-${id}`;
+  if(custom) {
+    tr.innerHTML = `
+      <td><input type="text" placeholder="Custom service name" oninput="recalc()"></td>
+      <td style="text-align:center;"><input type="text" placeholder="e.g. $5K – $10K" style="width:120px;"></td>
+      <td><input type="number" min="0" step="500" placeholder="$" oninput="recalc()"></td>
+      <td><input type="number" value="1" min="1" style="width:50px;" oninput="recalc()"></td>
+      <td class="computed" id="sr-tot-${id}">—</td>
+      <td><input type="text" placeholder="Notes"></td>
+      <td><button class="row-del" onclick="delSvcRow(${id})">×</button></td>`;
+  } else {
+    const opts = SERVICES.map(s =>
+      `<option value="${s.name}" data-range="${s.range}">${s.name}</option>`).join('');
+    tr.innerHTML = `
+      <td>
+        <select onchange="onSvcSelect(${id},this)" style="width:100%;">
+          <option value="">— select service —</option>${opts}
+        </select>
+      </td>
+      <td class="computed" id="sr-range-${id}" style="font-size:10px;color:var(--muted);font-style:italic;">—</td>
+      <td><input type="number" id="sr-price-${id}" min="0" step="500" placeholder="$" oninput="recalc()"></td>
+      <td><input type="number" id="sr-qty-${id}" value="1" min="1" style="width:50px;" oninput="recalc()"></td>
+      <td class="computed" id="sr-tot-${id}">—</td>
+      <td><input type="text" placeholder="Notes"></td>
+      <td><button class="row-del" onclick="delSvcRow(${id})">×</button></td>`;
+  }
+  document.getElementById('svc-body').appendChild(tr);
+  recalc();
+}
+function onSvcSelect(id, sel) {
+  const opt = sel.options[sel.selectedIndex];
+  const el = document.getElementById(`sr-range-${id}`);
+  if(el) el.textContent = opt.getAttribute('data-range') || '—';
+  recalc();
+}
+function delSvcRow(id) {
+  const el = document.getElementById(`sr-${id}`); if(el) el.remove();
+  svcRows = svcRows.filter(r => r!==id); recalc();
+}
+
+// ── LABOR ROWS ──
+function addLaborRow(d={}) {
+  const id = labNext++;
+  labRows.push(id);
+  const tr = document.createElement('tr');
+  tr.id = `lr-${id}`;
+
+  const nameOpts = ['', ...getRosterNames()].map(n =>
+    `<option ${n===d.name?'selected':''}>${n}</option>`).join('');
+  const roles = d.name ? getRolesForName(d.name) : [];
+  const roleOpts = ['', ...roles].map(r =>
+    `<option ${r===d.role?'selected':''}>${r}</option>`).join('');
+  const rate = (d.name && d.role) ? (getRosterRate(d.name, d.role) || '') : '';
+
+  tr.innerHTML = `
+    <td><input type="text" placeholder="Phase" value="${d.phase||''}" oninput="recalc()" style="width:100%;"></td>
+    <td>
+      <select id="lr-name-${id}" onchange="onLaborName(${id},this)" style="width:100%;">
+        ${nameOpts}
+      </select>
+    </td>
+    <td>
+      <select id="lr-role-${id}" onchange="onLaborRole(${id},this)" style="width:100%;">
+        ${roleOpts}
+      </select>
+    </td>
+    <td><input id="lr-rate-${id}" type="number" min="0" step="5" value="${rate}" style="width:70px;" oninput="recalc()"></td>
+    <td><input id="lr-alloc-${id}" type="number" min="0" max="100" step="5" value="0" style="width:60px;" placeholder="%" oninput="recalc()"></td>
+    <td class="hours-val" id="lr-hrs-${id}">—</td>
+    <td class="cost-val" id="lr-cost-${id}">—</td>
+    <td><button class="row-del" onclick="delLaborRow(${id})">×</button></td>`;
+  document.getElementById('lab-body').appendChild(tr);
+  recalc();
+}
+function onLaborName(id, sel) {
+  const roles = getRolesForName(sel.value);
+  const rs = document.getElementById(`lr-role-${id}`);
+  rs.innerHTML = ['', ...roles].map(r => `<option>${r}</option>`).join('');
+  document.getElementById(`lr-rate-${id}`).value = '';
+  recalc();
+}
+function onLaborRole(id, sel) {
+  const ns = document.getElementById(`lr-name-${id}`);
+  if(ns.value && sel.value) {
+    const rate = getRosterRate(ns.value, sel.value);
+    if(rate) document.getElementById(`lr-rate-${id}`).value = rate;
+  }
+  recalc();
+}
+function delLaborRow(id) {
+  const el = document.getElementById(`lr-${id}`); if(el) el.remove();
+  labRows = labRows.filter(r => r!==id); recalc();
+}
+
+// ── HELPERS ──
+const fmt = n => '$' + Math.round(n).toLocaleString('en-US');
+const get = id => (document.getElementById(id)||{}).value || '';
+
+// ── RECALC ──
+function recalc() {
+  const co = get('c-co'), proj = get('c-proj');
+  document.getElementById('hdr-proj').textContent =
+    [co, proj].filter(Boolean).join(' — ') || 'New Estimate';
+  document.getElementById('s-co').textContent = co || '—';
+  document.getElementById('s-contact').textContent = get('c-contact');
+
+  // services
+  let grand = 0;
+  svcRows.forEach(id => {
+    const p = parseFloat((document.getElementById(`sr-price-${id}`)||{}).value) || 0;
+    const q = parseFloat((document.getElementById(`sr-qty-${id}`)||{}).value)   || 1;
+    const t = p * q; grand += t;
+    const el = document.getElementById(`sr-tot-${id}`);
+    if(el) el.textContent = t > 0 ? fmt(t) : '—';
+  });
+  document.getElementById('svc-grand').textContent = fmt(grand);
+
+  // split
+  const pP  = parseFloat(get('pct-p'))  || 0;
+  const pOH = parseFloat(get('pct-oh')) || 0;
+  const pL  = parseFloat(get('pct-l'))  || 0;
+  const sum = pP + pOH + pL;
+  document.getElementById('split-warn').textContent =
+    Math.abs(sum-100) > 0.5 ? `⚠ Total is ${sum}% — must equal 100%` : '';
+
+  const pull    = parseFloat(get('oh-pull')) || 0;
+  const amtP    = grand * (pP  / 100);
+  const amtOH   = grand * (pOH / 100);
+  const amtL    = grand * (pL  / 100);
+  const ohNet   = Math.max(0, amtOH - pull);
+  const labBudget = amtL + pull;
+
+  document.getElementById('amt-p').textContent   = fmt(amtP);
+  document.getElementById('amt-oh').textContent  = fmt(ohNet);
+  document.getElementById('amt-l').textContent   = fmt(labBudget);
+  document.getElementById('eff-labor').textContent = fmt(labBudget);
+  document.getElementById('oh-result').textContent = pull > 0
+    ? `OH: ${fmt(ohNet)} remaining · Labor: ${fmt(labBudget)}` : '';
+
+  document.getElementById('s-total').textContent   = fmt(grand);
+  document.getElementById('s-profit').textContent  = fmt(amtP);
+  document.getElementById('s-oh').textContent      = fmt(ohNet);
+  document.getElementById('s-lab-bud').textContent = fmt(labBudget);
+
+  // labor
+  let totalAlloc=0, totalUsed=0;
+  const hoursData = [];
+  labRows.forEach(id => {
+    const rateEl  = document.getElementById(`lr-rate-${id}`);
+    const allocEl = document.getElementById(`lr-alloc-${id}`);
+    if(!rateEl) return;
+    const rate  = parseFloat(rateEl.value)  || 0;
+    const alloc = parseFloat(allocEl.value) || 0;
+    totalAlloc += alloc;
+    const cost  = labBudget * (alloc / 100);
+    const hours = rate > 0 ? cost / rate : 0;
+    totalUsed += cost;
+    document.getElementById(`lr-hrs-${id}`).textContent  = hours > 0 ? hours.toFixed(1) : '—';
+    document.getElementById(`lr-cost-${id}`).textContent = cost > 0  ? fmt(cost) : '—';
+    const nameEl = document.getElementById(`lr-name-${id}`);
+    const label  = (nameEl ? nameEl.value : '') || `Role ${id}`;
+    if(hours > 0) hoursData.push({label, hours, cost});
+  });
+
+  document.getElementById('lab-tot-alloc').textContent = totalAlloc + '%';
+  document.getElementById('lab-tot-cost').textContent  = fmt(totalUsed);
+  document.getElementById('lab-tot-hrs').textContent   =
+    hoursData.reduce((a,h)=>a+h.hours,0).toFixed(1);
+
+  const pct = labBudget > 0 ? Math.min(totalUsed/labBudget*100, 100) : 0;
+  const bar = document.getElementById('bar-fill');
+  bar.style.width = pct + '%';
+  bar.className = 'bar-fill ' + (pct > 95 ? 'over' : 'ok');
+  document.getElementById('bar-pct').textContent = Math.round(pct) + '%';
+
+  document.getElementById('s-lab-used').textContent = fmt(totalUsed);
+  document.getElementById('s-lab-rem').textContent  = fmt(Math.max(0, labBudget-totalUsed));
+
+  const badge = document.getElementById('s-badge');
+  if(totalAlloc > 100)    { badge.className='s-badge over'; badge.textContent='⚠ Over-allocated'; }
+  else if(totalAlloc < 50){ badge.className='s-badge warn'; badge.textContent='○ Under-allocated'; }
+  else                    { badge.className='s-badge ok';   badge.textContent='✓ Labor Allocated'; }
+
+  const hl = document.getElementById('s-hrs-list');
+  hl.innerHTML = hoursData.length === 0
+    ? '<div style="color:#333;font-size:11px;font-style:italic;">Add roles to see breakdown</div>'
+    : hoursData.map(h => `
+        <div class="s-hours-item">
+          <span class="n">${h.label}</span><span class="d"></span>
+          <span class="h">${h.hours.toFixed(1)} hrs</span>
+        </div>`).join('');
+
+  buildBanzai(grand, amtP, ohNet, labBudget, totalUsed, hoursData);
+}
+
+function buildBanzai(total, profit, oh, labBudget, labUsed, hoursData) {
+  const lines = [
+    `════════════════════════════════`,
+    `  GEL · INTERNAL ESTIMATE`,
+    `  → Rebuild in Banzai for client`,
+    `════════════════════════════════`,
+    `CLIENT:   ${get('c-co')||'[Client]'}`,
+    get('c-contact') && `CONTACT:  ${get('c-contact')}`,
+    `PROJECT:  ${get('c-proj')||'[Project]'}`,
+    `DATE:     ${get('c-date')}`,
+    ``,
+    `── SERVICES ─────────────────────`,
+    ...svcRows.map(id => {
+      const p = parseFloat((document.getElementById(`sr-price-${id}`)||{}).value)||0;
+      const q = parseFloat((document.getElementById(`sr-qty-${id}`)||{}).value)||1;
+      const rowEl = document.getElementById(`sr-${id}`); if(!rowEl) return null;
+      const sel = rowEl.querySelector('select');
+      const name = sel ? sel.value : (rowEl.querySelector('input')||{}).value||'';
+      return (p > 0 && name) ? `  ${name}${q>1?' ×'+q:''}: ${fmt(p*q)}` : null;
+    }).filter(Boolean),
+    ``,
+    `── BUDGET ───────────────────────`,
+    `  Total:         ${fmt(total)}`,
+    `  Profit:        ${fmt(profit)}`,
+    `  Overhead:      ${fmt(oh)}`,
+    `  Labor Budget:  ${fmt(labBudget)}`,
+    `  Labor Used:    ${fmt(labUsed)}`,
+    ``,
+    hoursData.length > 0 && `── HOURS ────────────────────────`,
+    ...hoursData.map(h => `  ${h.label}: ${h.hours.toFixed(1)} hrs`),
+    ``,
+    `── INTERNAL ONLY ────────────────`,
+    `  Do not share with client.`,
+    `  gelcomm.com · pato@gelcomm.com`,
+  ].filter(l => l!==false && l!=null && l!==undefined);
+  document.getElementById('banzai-out').value = lines.join('\n');
+}
+
+function copyBanzai() {
+  const ta = document.getElementById('banzai-out');
+  ta.select(); document.execCommand('copy');
+  const btns = document.querySelectorAll('.copy-btn-side, .tbtn.copy-btn-top');
+  btns.forEach(b => b.textContent = '✓ Copied');
+  setTimeout(() => {
+    document.querySelector('.copy-btn-side').textContent = '⎘ Copy to Clipboard';
+    const tb = document.querySelector('.tbtn.copy-btn-top');
+    if(tb) tb.textContent = '⎘ Copy Brief';
+  }, 1500);
+}
+
+// ── HISTORY ──
+function saveEstimate() {
+  let hist = [];
+  try { hist = JSON.parse(localStorage.getItem('gel_hist2')||'[]'); } catch(e) {}
+
+  const svcs = svcRows.map(id => {
+    const rowEl = document.getElementById(`sr-${id}`); if(!rowEl) return null;
+    const sel = rowEl.querySelector('select');
+    const price = parseFloat((document.getElementById(`sr-price-${id}`)||{}).value)||0;
+    const qty   = parseFloat((document.getElementById(`sr-qty-${id}`)||{}).value)||1;
+    return {name: sel?sel.value:'', price, qty};
+  }).filter(Boolean);
+
+  const labor = labRows.map(id => {
+    const rowEl = document.getElementById(`lr-${id}`); if(!rowEl) return null;
+    const phase = (rowEl.querySelector('input[type=text]')||{}).value||'';
+    const name  = (document.getElementById(`lr-name-${id}`)||{}).value||'';
+    const role  = (document.getElementById(`lr-role-${id}`)||{}).value||'';
+    const rate  = parseFloat((document.getElementById(`lr-rate-${id}`)||{}).value)||0;
+    const alloc = parseFloat((document.getElementById(`lr-alloc-${id}`)||{}).value)||0;
+    return {phase, name, role, rate, alloc};
+  }).filter(Boolean);
+
+  let total = 0;
+  svcRows.forEach(id => {
+    const p = parseFloat((document.getElementById(`sr-price-${id}`)||{}).value)||0;
+    const q = parseFloat((document.getElementById(`sr-qty-${id}`)||{}).value)||1;
+    total += p * q;
+  });
+
+  hist.push({
+    co:get('c-co'), contact:get('c-contact'), proj:get('c-proj'), date:get('c-date'),
+    pP:get('pct-p'), pOH:get('pct-oh'), pL:get('pct-l'), pull:get('oh-pull'),
+    svcs, labor, total,
+    savedAt: new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}),
+  });
+  localStorage.setItem('gel_hist2', JSON.stringify(hist));
+  renderHistory();
+  const btn = document.querySelector('.save-btn-side');
+  if(btn) { btn.textContent='✓ Saved'; setTimeout(()=>btn.textContent='↓ Save to History',1500); }
+  const tbtn = document.querySelector('.tbtn.save-btn');
+  if(tbtn) { tbtn.textContent='✓ Saved'; setTimeout(()=>tbtn.textContent='↓ Save',1500); }
+}
+
+function renderHistory() {
+  let hist = [];
+  try { hist = JSON.parse(localStorage.getItem('gel_hist2')||'[]'); } catch(e) {}
+  const el = document.getElementById('hist-container');
+  if(!hist.length) {
+    el.innerHTML='<div class="hist-empty">No saved estimates yet. Build one and click Save.</div>';
+    return;
+  }
+  el.innerHTML = `<div class="hist-grid">${
+    hist.slice().reverse().map((h,ri) => {
+      const i = hist.length-1-ri;
+      return `<div class="hist-card" onclick="loadEstimate(${i})">
+        <button class="hist-card-del" onclick="event.stopPropagation();deleteEstimate(${i})">×</button>
+        <div class="hist-card-co">${h.co||'Unnamed Client'}</div>
+        <div class="hist-card-proj">${h.proj||'No project name'}</div>
+        <div class="hist-card-total">${fmt(h.total||0)}</div>
+        <div class="hist-card-meta">Saved ${h.savedAt||''} · ${h.date||'No date'}</div>
+      </div>`;
+    }).join('')
+  }</div>`;
+}
+
+function loadEstimate(i) {
+  let hist = [];
+  try { hist = JSON.parse(localStorage.getItem('gel_hist2')||'[]'); } catch(e) {}
+  const h = hist[i]; if(!h) return;
+  clearAll(true);
+  document.getElementById('c-co').value      = h.co||'';
+  document.getElementById('c-contact').value = h.contact||'';
+  document.getElementById('c-proj').value    = h.proj||'';
+  document.getElementById('c-date').value    = h.date||'';
+  document.getElementById('pct-p').value     = h.pP||45;
+  document.getElementById('pct-oh').value    = h.pOH||35;
+  document.getElementById('pct-l').value     = h.pL||20;
+  document.getElementById('oh-pull').value   = h.pull||0;
+  (h.svcs||[]).forEach(s => {
+    addSvcRow();
+    const id = svcRows[svcRows.length-1];
+    const rowEl = document.getElementById(`sr-${id}`); if(!rowEl) return;
+    const sel = rowEl.querySelector('select');
+    if(sel && s.name) { sel.value=s.name; onSvcSelect(id,sel); }
+    const pe = document.getElementById(`sr-price-${id}`); if(pe) pe.value=s.price||'';
+    const qe = document.getElementById(`sr-qty-${id}`);   if(qe) qe.value=s.qty||1;
+  });
+  (h.labor||[]).forEach(l => addLaborRow(l));
+  switchTab('estimator', document.querySelector('.navtab'));
+  recalc();
+}
+
+function deleteEstimate(i) {
+  let hist = [];
+  try { hist = JSON.parse(localStorage.getItem('gel_hist2')||'[]'); } catch(e) {}
+  hist.splice(i,1);
+  localStorage.setItem('gel_hist2', JSON.stringify(hist));
+  renderHistory();
+}
+
+function loadHistory() { renderHistory(); }
+
+function clearAll(silent=false) {
+  svcRows.forEach(id => { const e=document.getElementById(`sr-${id}`); if(e)e.remove(); });
+  labRows.forEach(id => { const e=document.getElementById(`lr-${id}`); if(e)e.remove(); });
+  svcRows=[]; svcNext=1; labRows=[]; labNext=1;
+  ['c-co','c-contact','c-proj'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('c-date').value   = new Date().toISOString().split('T')[0];
+  document.getElementById('pct-p').value    = 45;
+  document.getElementById('pct-oh').value   = 35;
+  document.getElementById('pct-l').value    = 20;
+  document.getElementById('oh-pull').value  = 0;
+  if(!silent) {
+    addSvcRow(); addSvcRow();
+    addLaborRow({phase:"Brand Strategy",   name:"Tyron Akal",        role:"Brand Strategist"});
+    addLaborRow({phase:"Packaging Design", name:"Tathy Otero",       role:"Senior Designer"});
+    addLaborRow({phase:"Project Mgmt",     name:"Pauline Bojorquez", role:"Account Executive"});
+  }
+  recalc();
+}
+</script>
+</body>
+</html>
