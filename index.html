@@ -818,42 +818,6 @@ body { font-family:'Karla',sans-serif; font-size:14px; background:var(--ink); co
     </div>
 
     <!-- ══ TAB: CLIENTS ══ -->
-    <div class="tab-content" id="tab-clients">
-      <div class="tab-full">
-        <div class="block">
-          <div class="block-head">
-            <div class="step-pip" style="background:var(--pink);">✦</div>
-            <div class="block-title">Client Directory</div>
-            <div class="block-sub">All contacts including leads</div>
-          </div>
-          <div class="clients-toolbar">
-            <input class="clients-search" id="clients-search" type="text"
-              placeholder="Search by company, contact, or category…"
-              oninput="renderClients()">
-            <button class="add-btn" style="border-color:var(--pink);color:var(--pink);padding:8px 16px;"
-              onclick="openModal('modal-add-client')">+ Add Client</button>
-          </div>
-          <div class="tbl-wrap">
-            <table class="tbl">
-              <thead><tr>
-                <th style="width:20%">Company</th>
-                <th style="width:18%">Contact</th>
-                <th>Email</th>
-                <th>Phone</th>
-                <th>Category</th>
-                <th>Market</th>
-                <th>Status</th>
-                <th></th>
-              </tr></thead>
-              <tbody id="clients-body"></tbody>
-            </table>
-          </div>
-          <div id="clients-empty" style="display:none;padding:40px 0;text-align:center;color:var(--muted);font-style:italic;font-size:13px;">
-            No clients yet. Add your first one above.
-          </div>
-        </div>
-      </div>
-    </div>
     <div class="tab-content" id="tab-roster">
       <div class="tab-full">
         <div class="block">
@@ -868,10 +832,11 @@ body { font-family:'Karla',sans-serif; font-size:14px; background:var(--ink); co
           <div class="tbl-wrap">
             <table class="tbl">
               <thead><tr>
-                <th style="width:20%">Name</th>
-                <th style="width:22%">Role / Capacity</th>
-                <th>Rate ($/hr)</th>
-                <th>Type</th>
+                <th style="width:18%">Name</th>
+                <th style="width:20%">Role / Capacity</th>
+                <th>Rate ($)</th>
+                <th>Rate Type</th>
+                <th>Staff Type</th>
                 <th>Notes</th>
                 <th></th>
               </tr></thead>
@@ -1424,6 +1389,12 @@ function renderRoster() {
       <td><input type="text" value="${r.role}" oninput="updateRoster(${r.id},'role',this.value)"></td>
       <td><input type="number" value="${r.rate}" min="0" step="5" style="width:80px;" oninput="updateRoster(${r.id},'rate',parseFloat(this.value)||0)"></td>
       <td style="text-align:center;">
+        <select onchange="updateRoster(${r.id},'rateType',this.value)" style="width:90px;">
+          <option ${(r.rateType||'hourly')==='hourly'?'selected':''} value="hourly">Hourly</option>
+          <option ${r.rateType==='flat'?'selected':''} value="flat">Flat</option>
+        </select>
+      </td>
+      <td style="text-align:center;">
         <select onchange="updateRoster(${r.id},'type',this.value)" style="width:110px;">
           <option ${r.type==='Staff'?'selected':''}>Staff</option>
           <option ${r.type==='Freelancer'?'selected':''}>Freelancer</option>
@@ -1437,7 +1408,7 @@ function renderRoster() {
 }
 function addRosterRow() {
   const id = rosterNext++;
-  rosterRows.push({id, name:'', role:'', rate:0, type:'Freelancer', note:''});
+  rosterRows.push({id, name:'', role:'', rate:0, rateType:'hourly', type:'Freelancer', note:''});
   renderRoster(); saveRoster();
 }
 function updateRoster(id, key, val) {
@@ -1453,6 +1424,12 @@ function getRosterRate(name, role) {
     r.name.toLowerCase()===name.toLowerCase() &&
     r.role.toLowerCase()===role.toLowerCase());
   return m ? m.rate : null;
+}
+function getRosterRateType(name, role) {
+  const m = rosterRows.find(r =>
+    r.name.toLowerCase()===name.toLowerCase() &&
+    r.role.toLowerCase()===role.toLowerCase());
+  return m ? (m.rateType || 'hourly') : 'hourly';
 }
 function getRosterNames() { return [...new Set(rosterRows.map(r => r.name))]; }
 function getRolesForName(name) {
@@ -1518,7 +1495,11 @@ function addLaborRow(d={}) {
   const roleOpts = ['', ...roles].map(r =>
     `<option ${r===d.role?'selected':''}>${r}</option>`).join('');
   const rate = (d.name && d.role) ? (getRosterRate(d.name, d.role) || '') : '';
-  const isFlat = d.flat || false;
+  const rosterRateType = (d.name && d.role) ? getRosterRateType(d.name, d.role) : 'hourly';
+  const isFlat = d.flat !== undefined ? d.flat : (rosterRateType === 'flat');
+
+  const isInRoster = getRosterNames().includes(d.name||'');
+  const hasRole = roles.includes(d.role||'');
 
   tr.innerHTML = `
     <td><input type="text" placeholder="Phase" value="${d.phase||''}" oninput="recalc()" style="width:100%;"></td>
@@ -1527,8 +1508,8 @@ function addLaborRow(d={}) {
         ${nameOpts}
       </select>
       <input id="lr-name-txt-${id}" type="text" placeholder="or type name…"
-        value="${d.name && !getRosterNames().includes(d.name) ? d.name : ''}"
-        style="width:100%;margin-top:3px;display:${getRosterNames().includes(d.name||'') ? 'none' : 'block'};"
+        value="${!isInRoster && d.name ? d.name : ''}"
+        style="width:100%;margin-top:3px;display:${isInRoster ? 'none' : 'block'};"
         oninput="recalc()">
     </td>
     <td>
@@ -1536,8 +1517,8 @@ function addLaborRow(d={}) {
         ${roleOpts}
       </select>
       <input id="lr-role-txt-${id}" type="text" placeholder="or type role…"
-        value="${d.role && !roles.includes(d.role) ? d.role : ''}"
-        style="width:100%;margin-top:3px;display:${roles.includes(d.role||'') ? 'none' : 'block'};"
+        value="${!hasRole && d.role ? d.role : ''}"
+        style="width:100%;margin-top:3px;display:${isInRoster && hasRole ? 'none' : (isInRoster && roles.length > 0 ? 'none' : 'block')};"
         oninput="recalc()">
     </td>
     <td>
@@ -1594,9 +1575,15 @@ function onLaborName(id, sel) {
 function onLaborRole(id, sel) {
   const ns = document.getElementById(`lr-name-${id}`);
   const roleTxt = document.getElementById(`lr-role-txt-${id}`);
+  const flatCb  = document.getElementById(`lr-flat-${id}`);
   if(ns.value && sel.value) {
     const rate = getRosterRate(ns.value, sel.value);
     if(rate) document.getElementById(`lr-rate-${id}`).value = rate;
+    const rateType = getRosterRateType(ns.value, sel.value);
+    if(flatCb) {
+      flatCb.checked = rateType === 'flat';
+      onFlatToggle(id, flatCb);
+    }
     roleTxt.style.display = 'none';
   } else if(!sel.value) {
     roleTxt.style.display = 'block';
