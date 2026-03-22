@@ -445,6 +445,16 @@ body { font-family:'Karla',sans-serif; font-size:14px; background:var(--ink); co
 }
 .client-add-link:hover { color:var(--pink-d); }
 
+/* ── TOAST ── */
+.toast {
+  position:fixed; bottom:28px; left:50%; transform:translateX(-50%) translateY(20px);
+  background:var(--green); color:white; padding:10px 24px;
+  font-family:'Karla',sans-serif; font-size:12px; font-weight:600;
+  letter-spacing:1px; opacity:0; transition:all 0.3s ease; z-index:300;
+  pointer-events:none; white-space:nowrap;
+}
+.toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
 /* grand total row */
 .grand-strip {
   display:flex; justify-content:space-between; align-items:center;
@@ -548,6 +558,8 @@ body { font-family:'Karla',sans-serif; font-size:14px; background:var(--ink); co
     </div>
   </div>
 </div>
+
+<div class="toast" id="toast">✓ Saved</div>
 
 <div class="chrome">
   <!-- TOP BAR -->
@@ -867,6 +879,7 @@ body { font-family:'Karla',sans-serif; font-size:14px; background:var(--ink); co
           </div>
           <div class="add-row" style="margin-bottom:16px;">
             <button class="add-btn gold" onclick="addServiceRow()">+ Add Service</button>
+            <button class="add-btn" style="border-color:var(--green);color:var(--green);font-weight:700;" onclick="saveServiceMenu(true)">↓ Save Menu</button>
           </div>
           <div class="tbl-wrap">
             <table class="tbl">
@@ -1250,9 +1263,17 @@ function loadServiceMenu() {
   saveServiceMenu();
 }
 
-function saveServiceMenu() {
+function showToast(msg='✓ Saved') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+function saveServiceMenu(showConfirm=false) {
   localStorage.setItem('gel_svcmenu', JSON.stringify(serviceMenu));
   localStorage.setItem('gel_svcmenu_ver', SVC_VERSION);
+  if(showConfirm) showToast('✓ Service Menu Saved');
 }
 
 function renderServiceMenu() {
@@ -1711,6 +1732,7 @@ function saveEstimate() {
   });
   localStorage.setItem('gel_hist2', JSON.stringify(hist));
   renderHistory();
+  showToast('✓ Estimate Saved');
   const btn = document.querySelector('.save-btn-side');
   if(btn) { btn.textContent='✓ Saved'; setTimeout(()=>btn.textContent='↓ Save to History',1500); }
   const tbtn = document.querySelector('.tbtn.save-btn');
