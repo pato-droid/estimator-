@@ -79,7 +79,18 @@ body { font-family:'Karla',sans-serif; font-size:14px; background:var(--ink); co
   background:var(--pink); border-color:var(--pink); color:white; font-weight:600;
 }
 .tbtn.print-btn:hover { background:var(--pink-d); border-color:var(--pink-d); }
-.tbtn-sep { width:1px; height:20px; background:#2a2824; margin:0 2px; flex-shrink:0; }
+.tbtn.backup-btn {
+  background:#0a1a2a; border-color:#2a5a8a; color:#5aabea; font-weight:600;
+}
+.tbtn.backup-btn:hover { background:#2a5a8a; color:white; border-color:#2a5a8a; }
+.tbtn.restore-btn {
+  background:#1a0a2a; border-color:#6a2a8a; color:#aa6aea; font-weight:600;
+  font-family:'Karla',sans-serif; font-size:9px; letter-spacing:1px;
+  text-transform:uppercase; border:1px solid #6a2a8a;
+  padding:6px 11px; transition:all 0.15s; white-space:nowrap;
+  display:flex; align-items:center;
+}
+.tbtn.restore-btn:hover { background:#6a2a8a; color:white; border-color:#6a2a8a; }
 
 /* ── NAV TABS ── */
 .navtabs {
@@ -577,6 +588,12 @@ body { font-family:'Karla',sans-serif; font-size:14px; background:var(--ink); co
       <button class="tbtn save-btn" onclick="saveEstimate()">↓ Save</button>
       <button class="tbtn copy-btn-top" onclick="copyBanzai()">⎘ Copy Brief</button>
       <button class="tbtn print-btn" onclick="window.print()">Print / PDF</button>
+      <div class="tbtn-sep"></div>
+      <button class="tbtn backup-btn" onclick="exportBackup()" title="Download full backup of all data">↓ Backup</button>
+      <label class="tbtn restore-btn" title="Restore from backup file" style="cursor:pointer;">
+        ↑ Restore
+        <input type="file" accept=".json" style="display:none;" onchange="importBackup(this)">
+      </label>
     </div>
   </div>
 
@@ -733,10 +750,11 @@ body { font-family:'Karla',sans-serif; font-size:14px; background:var(--ink); co
           <div class="tbl-wrap">
             <table class="tbl">
               <thead><tr>
-                <th style="width:18%">Phase / Service</th>
-                <th style="width:16%">Talent</th>
-                <th style="width:16%">Role</th>
-                <th>Rate ($/hr)</th>
+                <th style="width:16%">Phase / Service</th>
+                <th style="width:14%">Talent</th>
+                <th style="width:14%">Role</th>
+                <th>Rate</th>
+                <th style="width:7%">Flat?</th>
                 <th>Alloc %</th>
                 <th>Hours</th>
                 <th>Cost ($)</th>
@@ -744,7 +762,7 @@ body { font-family:'Karla',sans-serif; font-size:14px; background:var(--ink); co
               </tr></thead>
               <tbody id="lab-body"></tbody>
               <tfoot><tr>
-                <td colspan="4" style="text-align:left;padding-left:12px;font-size:9px;letter-spacing:2px;text-transform:uppercase;">Totals</td>
+                <td colspan="5" style="text-align:left;padding-left:12px;font-size:9px;letter-spacing:2px;text-transform:uppercase;">Totals</td>
                 <td style="text-align:center;" id="lab-tot-alloc">0%</td>
                 <td style="text-align:center;" id="lab-tot-hrs">—</td>
                 <td style="text-align:center;" id="lab-tot-cost">$0</td>
@@ -860,7 +878,10 @@ body { font-family:'Karla',sans-serif; font-size:14px; background:var(--ink); co
               <tbody id="roster-body"></tbody>
             </table>
           </div>
-          <div class="add-row"><button class="add-btn" onclick="addRosterRow()">+ Add Talent</button></div>
+          <div class="add-row">
+            <button class="add-btn" onclick="addRosterRow()">+ Add Talent</button>
+            <button class="add-btn" style="border-color:var(--green);color:var(--green);font-weight:700;" onclick="saveRoster();showToast('✓ Roster Saved')">↓ Save Roster</button>
+          </div>
         </div>
       </div>
     </div>
@@ -999,7 +1020,7 @@ const SEED_CLIENTS = [
   {co:"SNL Creative",                                       contact:"Shawn Zindroski",  email:"shawn@snlcreative.com",          phone:"", cat:"", market:"Domestic US", status:"Active Client", notes:""},
 ];
 
-const CLIENT_VERSION = 'v3'; // bump this to force-reload seed data
+const CLIENT_VERSION = 'v3'; // bump this to force-reload seed data only
 
 function loadClients() {
   try {
@@ -1011,7 +1032,7 @@ function loadClients() {
       return;
     }
   } catch(e) {}
-  // Fresh load from seed
+  // Fresh load from seed — never touches saved estimates
   clients = SEED_CLIENTS.map((c,i) => ({id:i+1,...c}));
   clientNext = clients.length + 1;
   saveClients();
@@ -1020,11 +1041,6 @@ function loadClients() {
 function saveClients() {
   localStorage.setItem('gel_clients', JSON.stringify(clients));
   localStorage.setItem('gel_clients_ver', CLIENT_VERSION);
-  populateClientPicker();
-}
-
-function saveClients() {
-  localStorage.setItem('gel_clients', JSON.stringify(clients));
   populateClientPicker();
 }
 
@@ -1502,6 +1518,7 @@ function addLaborRow(d={}) {
   const roleOpts = ['', ...roles].map(r =>
     `<option ${r===d.role?'selected':''}>${r}</option>`).join('');
   const rate = (d.name && d.role) ? (getRosterRate(d.name, d.role) || '') : '';
+  const isFlat = d.flat || false;
 
   tr.innerHTML = `
     <td><input type="text" placeholder="Phase" value="${d.phase||''}" oninput="recalc()" style="width:100%;"></td>
@@ -1509,32 +1526,80 @@ function addLaborRow(d={}) {
       <select id="lr-name-${id}" onchange="onLaborName(${id},this)" style="width:100%;">
         ${nameOpts}
       </select>
+      <input id="lr-name-txt-${id}" type="text" placeholder="or type name…"
+        value="${d.name && !getRosterNames().includes(d.name) ? d.name : ''}"
+        style="width:100%;margin-top:3px;display:${getRosterNames().includes(d.name||'') ? 'none' : 'block'};"
+        oninput="recalc()">
     </td>
     <td>
       <select id="lr-role-${id}" onchange="onLaborRole(${id},this)" style="width:100%;">
         ${roleOpts}
       </select>
+      <input id="lr-role-txt-${id}" type="text" placeholder="or type role…"
+        value="${d.role && !roles.includes(d.role) ? d.role : ''}"
+        style="width:100%;margin-top:3px;display:${roles.includes(d.role||'') ? 'none' : 'block'};"
+        oninput="recalc()">
     </td>
-    <td><input id="lr-rate-${id}" type="number" min="0" step="5" value="${rate}" style="width:70px;" oninput="recalc()"></td>
-    <td><input id="lr-alloc-${id}" type="number" min="0" max="100" step="5" value="0" style="width:60px;" placeholder="%" oninput="recalc()"></td>
-    <td class="hours-val" id="lr-hrs-${id}">—</td>
+    <td>
+      <input id="lr-rate-${id}" type="number" min="0" step="5" value="${d.rate||rate}"
+        style="width:80px;" oninput="recalc()"
+        title="${isFlat ? 'Flat project fee ($)' : 'Hourly rate ($/hr)'}">
+    </td>
+    <td style="text-align:center;">
+      <input id="lr-flat-${id}" type="checkbox" ${isFlat?'checked':''}
+        onchange="onFlatToggle(${id},this)"
+        title="Check for flat rate / project fee"
+        style="width:16px;height:16px;cursor:pointer;accent-color:var(--gold);">
+    </td>
+    <td><input id="lr-alloc-${id}" type="number" min="0" max="100" step="5" value="${d.alloc||0}"
+      style="width:60px;display:${isFlat?'none':'inline'};" placeholder="%" oninput="recalc()">
+      <span id="lr-alloc-flat-${id}" style="font-size:10px;color:var(--gold);display:${isFlat?'inline':'none'};">FLAT</span>
+    </td>
+    <td class="hours-val" id="lr-hrs-${id}">${isFlat?'—':'—'}</td>
     <td class="cost-val" id="lr-cost-${id}">—</td>
     <td><button class="row-del" onclick="delLaborRow(${id})">×</button></td>`;
   document.getElementById('lab-body').appendChild(tr);
   recalc();
 }
+
+function onFlatToggle(id, cb) {
+  const isFlat = cb.checked;
+  const allocInput = document.getElementById(`lr-alloc-${id}`);
+  const allocFlat  = document.getElementById(`lr-alloc-flat-${id}`);
+  const rateInput  = document.getElementById(`lr-rate-${id}`);
+  allocInput.style.display = isFlat ? 'none' : 'inline';
+  allocFlat.style.display  = isFlat ? 'inline' : 'none';
+  rateInput.title = isFlat ? 'Flat project fee ($)' : 'Hourly rate ($/hr)';
+  recalc();
+}
+
 function onLaborName(id, sel) {
   const roles = getRolesForName(sel.value);
   const rs = document.getElementById(`lr-role-${id}`);
+  const nameTxt  = document.getElementById(`lr-name-txt-${id}`);
+  const roleTxt  = document.getElementById(`lr-role-txt-${id}`);
   rs.innerHTML = ['', ...roles].map(r => `<option>${r}</option>`).join('');
   document.getElementById(`lr-rate-${id}`).value = '';
+  // Show text inputs if name not in roster
+  if(sel.value) {
+    nameTxt.style.display = 'none';
+    roleTxt.style.display = roles.length === 0 ? 'block' : 'none';
+  } else {
+    nameTxt.style.display = 'block';
+    roleTxt.style.display = 'block';
+  }
   recalc();
 }
+
 function onLaborRole(id, sel) {
   const ns = document.getElementById(`lr-name-${id}`);
+  const roleTxt = document.getElementById(`lr-role-txt-${id}`);
   if(ns.value && sel.value) {
     const rate = getRosterRate(ns.value, sel.value);
     if(rate) document.getElementById(`lr-rate-${id}`).value = rate;
+    roleTxt.style.display = 'none';
+  } else if(!sel.value) {
+    roleTxt.style.display = 'block';
   }
   recalc();
 }
@@ -1599,18 +1664,33 @@ function recalc() {
   labRows.forEach(id => {
     const rateEl  = document.getElementById(`lr-rate-${id}`);
     const allocEl = document.getElementById(`lr-alloc-${id}`);
+    const flatEl  = document.getElementById(`lr-flat-${id}`);
     if(!rateEl) return;
-    const rate  = parseFloat(rateEl.value)  || 0;
-    const alloc = parseFloat(allocEl.value) || 0;
-    totalAlloc += alloc;
-    const cost  = labBudget * (alloc / 100);
-    const hours = rate > 0 ? cost / rate : 0;
-    totalUsed += cost;
-    document.getElementById(`lr-hrs-${id}`).textContent  = hours > 0 ? hours.toFixed(1) : '—';
-    document.getElementById(`lr-cost-${id}`).textContent = cost > 0  ? fmt(cost) : '—';
-    const nameEl = document.getElementById(`lr-name-${id}`);
-    const label  = (nameEl ? nameEl.value : '') || `Role ${id}`;
-    if(hours > 0) hoursData.push({label, hours, cost});
+    const rate    = parseFloat(rateEl.value)  || 0;
+    const isFlat  = flatEl ? flatEl.checked : false;
+    const nameEl  = document.getElementById(`lr-name-${id}`);
+    const nameTxt = document.getElementById(`lr-name-txt-${id}`);
+    const label   = (nameEl && nameEl.value) ? nameEl.value
+                  : (nameTxt && nameTxt.value) ? nameTxt.value
+                  : `Role ${id}`;
+
+    if(isFlat) {
+      // Flat rate — cost is the rate field directly, no alloc %
+      const cost = rate;
+      totalUsed += cost;
+      document.getElementById(`lr-hrs-${id}`).textContent  = '—';
+      document.getElementById(`lr-cost-${id}`).textContent = cost > 0 ? fmt(cost) : '—';
+      if(cost > 0) hoursData.push({label, hours: 0, cost, flat: true});
+    } else {
+      const alloc = parseFloat(allocEl ? allocEl.value : 0) || 0;
+      totalAlloc += alloc;
+      const cost  = labBudget * (alloc / 100);
+      const hours = rate > 0 ? cost / rate : 0;
+      totalUsed += cost;
+      document.getElementById(`lr-hrs-${id}`).textContent  = hours > 0 ? hours.toFixed(1) : '—';
+      document.getElementById(`lr-cost-${id}`).textContent = cost > 0  ? fmt(cost) : '—';
+      if(hours > 0) hoursData.push({label, hours, cost, flat: false});
+    }
   });
 
   document.getElementById('lab-tot-alloc').textContent = totalAlloc + '%';
@@ -1638,7 +1718,7 @@ function recalc() {
     : hoursData.map(h => `
         <div class="s-hours-item">
           <span class="n">${h.label}</span><span class="d"></span>
-          <span class="h">${h.hours.toFixed(1)} hrs</span>
+          <span class="h">${h.flat ? fmt(h.cost) + ' flat' : h.hours.toFixed(1) + ' hrs'}</span>
         </div>`).join('');
 
   buildBanzai(grand, amtP, ohNet, labBudget, totalUsed, hoursData);
@@ -1815,6 +1895,54 @@ function clearAll(silent=false) {
     addLaborRow({phase:"Project Mgmt",     name:"Pauline Bojorquez", role:"Account Executive"});
   }
   recalc();
+}
+
+// ── BACKUP & RESTORE ──
+function exportBackup() {
+  const backup = {
+    version: '1.0',
+    exportedAt: new Date().toISOString(),
+    data: {
+      gel_clients:      localStorage.getItem('gel_clients'),
+      gel_clients_ver:  localStorage.getItem('gel_clients_ver'),
+      gel_roster2:      localStorage.getItem('gel_roster2'),
+      gel_svcmenu:      localStorage.getItem('gel_svcmenu'),
+      gel_svcmenu_ver:  localStorage.getItem('gel_svcmenu_ver'),
+      gel_hist2:        localStorage.getItem('gel_hist2'),
+    }
+  };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], {type:'application/json'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  const date = new Date().toISOString().split('T')[0];
+  a.href     = url;
+  a.download = `gel-estimator-backup-${date}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('✓ Backup Downloaded');
+}
+
+function importBackup(input) {
+  const file = input.files[0]; if(!file) return;
+  if(!confirm('Restore from this backup? This will replace all current data — clients, roster, service menu and saved estimates.')) {
+    input.value = ''; return;
+  }
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const backup = JSON.parse(e.target.result);
+      if(!backup.data) throw new Error('Invalid backup file');
+      Object.entries(backup.data).forEach(([key, val]) => {
+        if(val !== null) localStorage.setItem(key, val);
+      });
+      showToast('✓ Backup Restored — Reloading...');
+      setTimeout(() => location.reload(), 1500);
+    } catch(err) {
+      alert('Could not restore backup — file may be corrupted or invalid.');
+    }
+    input.value = '';
+  };
+  reader.readAsText(file);
 }
 </script>
 </body>
